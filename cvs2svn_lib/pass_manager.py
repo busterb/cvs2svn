@@ -279,8 +279,8 @@ class PassManager:
   def help_passes(self):
     """Output (to sys.stdout) the indices and names of available passes."""
 
-    print 'PASSES:'
+    print('PASSES:')
     for (i, the_pass) in enumerate(self.passes):
-      print '%5d : %s' % (i + 1, the_pass.name,)
+      print('%5d : %s' % (i + 1, the_pass.name,))
 
 

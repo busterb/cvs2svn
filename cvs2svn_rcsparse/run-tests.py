@@ -43,7 +43,7 @@ for filename in filelist:
     f = StringIO()
     try:
         parse(open(filename, 'rb'), LoggingSink(f))
-    except Exception, e:
+    except Exception as e:
         sys.stderr.write('Error parsing file: %s!\n' % (e,))
         all_tests_ok = 0
     else:

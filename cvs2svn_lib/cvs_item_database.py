@@ -110,7 +110,7 @@ class LinewiseSerializer(Serializer):
 
   @staticmethod
   def _encode_newlines(s):
-    """Return s with newlines and backslashes encoded.
+    r"""Return s with newlines and backslashes encoded.
 
     The string is returned with the following character transformations:
 

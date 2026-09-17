@@ -41,7 +41,7 @@ def call_command(command, **kw):
           'Command failed with return code %d: "%s"'
           % (retcode, ' '.join(command),)
           )
-  except OSError, e:
+  except OSError as e:
     raise FatalError(
         'Command execution failed (%s): "%s"'
         % (e, ' '.join(command),)
@@ -74,7 +74,7 @@ def check_command_runs(command, commandname):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         )
-  except OSError, e:
+  except OSError as e:
     raise CommandFailedException('error executing %s: %s' % (commandname, e,))
   (stdout, stderr) = pipe.communicate()
   if pipe.returncode or stderr:

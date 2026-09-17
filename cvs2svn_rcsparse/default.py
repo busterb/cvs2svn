@@ -37,7 +37,7 @@ class _TokenStream:
     self.idx = 0
     self.buf = self.rcsfile.read(self.CHUNK_SIZE)
     if self.buf == '':
-      raise RuntimeError, 'EOF'
+      raise RuntimeError('EOF')
 
   def get(self):
     "Get the next token from the RCS file."
@@ -109,7 +109,7 @@ class _TokenStream:
         idx = 0
         buf = self.rcsfile.read(self.CHUNK_SIZE)
         if buf == '':
-          raise RuntimeError, 'EOF'
+          raise RuntimeError('EOF')
         lbuf = len(buf)
       i = string.find(buf, '@', idx)
       if i == -1:
@@ -121,7 +121,7 @@ class _TokenStream:
         idx = 0
         buf = '@' + self.rcsfile.read(self.CHUNK_SIZE)
         if buf == '@':
-          raise RuntimeError, 'EOF'
+          raise RuntimeError('EOF')
         lbuf = len(buf)
         continue
       if buf[i + 1] == '@':
@@ -135,12 +135,6 @@ class _TokenStream:
       self.idx = i + 1
 
       return string.join(chunks, '')
-
-#  _get = get
-#  def get(self):
-    token = self._get()
-    print 'T:', `token`
-    return token
 
   def match(self, match):
     "Try to match the next token from the input buffer."

@@ -965,7 +965,7 @@ class _FileDataCollector(Sink):
             return
       else:
         return
-    except VendorBranchError, e:
+    except VendorBranchError as e:
       self.collect_data.record_fatal_error(str(e))
       return
 
@@ -1055,7 +1055,7 @@ class _ProjectDataCollector:
       # Abort the processing of this file, but let the pass continue
       # with other files:
       return
-    except ValueError, e:
+    except ValueError as e:
       self.collect_data.record_fatal_error(
           "%r is not a valid ,v file (%s)" % (cvs_file.rcs_path, str(e),)
           )

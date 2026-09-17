@@ -614,7 +614,7 @@ class Conversion:
   def find_tag_log(self, tagname):
     """Search LOGS for a log message containing 'TAGNAME' and return the
     log in which it was found."""
-    for i in xrange(len(self.logs), 0, -1):
+    for i in range(len(self.logs), 0, -1):
       if self.logs[i].msg.find("'"+tagname+"'") != -1:
         return self.logs[i]
     raise ValueError("Tag %s not found in logs" % tagname)

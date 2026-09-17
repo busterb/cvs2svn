@@ -864,7 +864,7 @@ class RunOptions(object):
       ctx.cvs_author_decoder.add_encoding(value)
       ctx.cvs_log_decoder.add_encoding(value)
       ctx.cvs_filename_decoder.add_encoding(value)
-    except LookupError, e:
+    except LookupError as e:
       raise FatalError(str(e))
 
   def callback_fallback_encoding(self, option, opt_str, value, parser):
@@ -874,7 +874,7 @@ class RunOptions(object):
       ctx.cvs_author_decoder.set_fallback_encoding(value)
       ctx.cvs_log_decoder.set_fallback_encoding(value)
       # Don't use fallback_encoding for filenames.
-    except LookupError, e:
+    except LookupError as e:
       raise FatalError(str(e))
 
   def callback_help_passes(self, option, opt_str, value, parser):

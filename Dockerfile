@@ -32,6 +32,7 @@ RUN apt-get update && \
     apt-get install -y \
         python \
         python-bsddb3 \
+        python-setuptools \
         subversion \
         rcs \
         cvs

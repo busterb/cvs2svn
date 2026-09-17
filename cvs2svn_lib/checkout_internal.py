@@ -516,7 +516,7 @@ class _Sink(Sink):
         # as the forward delta of our child revision.
         try:
           text = self._rcs_stream.invert_diff(text)
-        except MalformedDeltaException, e:
+        except MalformedDeltaException as e:
           logger.error(
               'Malformed RCS delta in %s, revision %s: %s'
               % (self.cvs_file_items.cvs_file.rcs_path, revision, e)

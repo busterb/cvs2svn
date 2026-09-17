@@ -127,7 +127,7 @@ class SVNOutputOption(OutputOption):
     # Check that the SVN paths of all LODS are disjoint:
     try:
       verify_paths_disjoint(*paths)
-    except PathsNotDisjointException, e:
+    except PathsNotDisjointException as e:
       logger.error(str(e))
       error_found = True
 
@@ -715,7 +715,7 @@ class RepositoryOutputOption(SVNOutputOption):
       # should be harmless.
       try:
         check_command_runs([Ctx().svnadmin_executable, 'help'], 'svnadmin')
-      except CommandFailedException, e:
+      except CommandFailedException as e:
         raise FatalError(
             '%s\n'
             'svnadmin could not be executed.  Please ensure that it is\n'

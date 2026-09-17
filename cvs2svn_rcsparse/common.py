@@ -366,11 +366,11 @@ class _Parser:
     date_fields = map(string.atoi, date_fields)
     EPOCH = 1970
     if date_fields[0] < EPOCH:
-      raise ValueError, 'invalid year for revision %s' % (revision,)
+      raise ValueError('invalid year for revision %s' % (revision,))
     try:
       timestamp = calendar.timegm(tuple(date_fields) + (0, 0, 0,))
-    except ValueError, e:
-      raise ValueError, 'invalid date for revision %s: %s' % (revision, e,)
+    except ValueError as e:
+      raise ValueError('invalid date for revision %s: %s' % (revision, e,))
 
     # Parse author
     ### NOTE: authors containing whitespace are violations of the
@@ -442,7 +442,7 @@ class _Parser:
         break
       text, sym2, log, sym1 = self.ts.mget(4)
       if sym1 != 'log':
-        print `text[:100], sym2[:100], log[:100], sym1[:100]`
+        print(repr((text[:100], sym2[:100], log[:100], sym1[:100])))
         raise RCSExpected(sym1, 'log')
       if sym2 != 'text':
         raise RCSExpected(sym2, 'text')

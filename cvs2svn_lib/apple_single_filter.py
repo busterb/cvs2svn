@@ -246,7 +246,7 @@ def get_maybe_apple_single_stream(stream):
 
   try:
     return AppleSingleFilter(stream)
-  except AppleSingleIncorrectMagicError, e:
+  except AppleSingleIncorrectMagicError as e:
     # This is OK; the file is not AppleSingle, so we read it normally:
     string_io = StringIO(e.data_read)
     if e.eof:

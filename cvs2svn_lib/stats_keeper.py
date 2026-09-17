@@ -29,7 +29,7 @@ from cvs2svn_lib.cvs_item import CVSTag
 class StatsKeeper:
   def __init__(self):
     self._svn_rev_count = None
-    self._first_rev_date = 1L<<32
+    self._first_rev_date = 1<<32
     self._last_rev_date = 0
     self._pass_timings = { }
     self._stats_reflect_exclude = False

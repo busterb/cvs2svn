@@ -229,8 +229,8 @@ class DVCSOutputOption(OutputOption):
     # parent is processed first:
     lod_ranges = lod_range_maps.items()
     lod_ranges.sort(
-        lambda (lod1,lod_range_map1),(lod2,lod_range_map2):
-        -cmp(len(lod_range_map1), len(lod_range_map2)) or cmp(lod1, lod2)
+        lambda t1, t2:
+        -cmp(len(t1[1]), len(t2[1])) or cmp(t1[0], t2[0])
         )
 
     source_groups = []

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import sys
-from distutils.core import setup
+from setuptools import setup
 
-assert 0x02040000 <= sys.hexversion < 0x03000000, \
-       "Install Python 2, version 2.4 or greater"
+assert sys.hexversion >= 0x03090000, \
+       "Install Python 3, version 3.9 or greater"
 
 
 def get_version():
@@ -70,7 +70,7 @@ like::
         'License :: OSI Approved',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
         'Topic :: Software Development :: Version Control',
         'Topic :: Software Development :: Version Control :: CVS',
         'Topic :: Utilities',

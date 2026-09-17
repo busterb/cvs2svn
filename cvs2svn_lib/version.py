@@ -19,6 +19,6 @@ VERSION = '2.6.0-dev'
 # If this file is run as a script, print the cvs2svn version number to
 # stdout:
 if __name__ == '__main__':
-    print VERSION
+    print(VERSION)
 
 

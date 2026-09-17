@@ -23,7 +23,7 @@ class TimeRange(object):
     # t_min down to T, and t_max up to T, naturally (without any
     # special-casing), and successive times will then ratchet them
     # outward as appropriate.
-    self.t_min = 1L<<32
+    self.t_min = 1<<32
     self.t_max = 0
 
   def add(self, timestamp):

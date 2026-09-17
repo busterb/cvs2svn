@@ -27,7 +27,7 @@ class RCSRevisionReader(AbstractRCSRevisionReader):
     self.co_executable = co_executable
     try:
       check_command_runs([self.co_executable, '--version'], self.co_executable)
-    except CommandFailedException, e:
+    except CommandFailedException as e:
       raise FatalError('%s\n'
                        'Please check that co is installed and in your PATH\n'
                        '(it is a part of the RCS software).' % (e,))

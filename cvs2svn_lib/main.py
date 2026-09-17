@@ -63,7 +63,7 @@ def main(progname, run_options, pass_manager):
   # But do lock the tmpdir, to avoid process clash.
   try:
     os.mkdir(os.path.join(ctx.tmpdir, 'cvs2svn.lock'))
-  except OSError, e:
+  except OSError as e:
     if e.errno == errno.EACCES:
       raise FatalError("Permission denied:"
                        + " No write access to directory '%s'." % ctx.tmpdir)

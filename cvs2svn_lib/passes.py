@@ -189,13 +189,13 @@ class CleanMetadataPass(Pass):
 
     try:
       metadata.author = self._get_clean_author(metadata.author)
-    except UnicodeError, e:
+    except UnicodeError as e:
       logger.warn('%s: %s' % (warning_prefix, e,))
       self.warnings = True
 
     try:
       metadata.log_msg = self._get_clean_log_msg(metadata.log_msg)
-    except UnicodeError, e:
+    except UnicodeError as e:
       logger.warn('%s: %s' % (warning_prefix, e,))
       self.warnings = True
 
@@ -365,10 +365,10 @@ class CollateSymbolsPass(Pass):
     for stats in self.symbol_stats:
       try:
         symbol = self.get_symbol(run_options, stats)
-      except IndeterminateSymbolException, e:
+      except IndeterminateSymbolException as e:
         self.log_symbol_summary(stats, stats.lod)
         mismatches.append(e.stats)
-      except SymbolPlanError, e:
+      except SymbolPlanError as e:
         self.log_symbol_summary(stats, stats.lod)
         errors.append(e)
       else:

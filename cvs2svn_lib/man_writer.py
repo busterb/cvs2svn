@@ -99,7 +99,7 @@ class ManWriter(object):
   def write_name(self, f):
     f.write('.SH "NAME"\n')
     f.write(
-        '%s \- %s\n' % (
+        '%s \\- %s\n' % (
             self.parser.get_prog_name(),
             self.short_desc,
             )

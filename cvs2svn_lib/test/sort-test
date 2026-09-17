@@ -44,5 +44,5 @@ sort.merge_files(filenames, OUTFILE, max_merge=4)
 for (i, line) in enumerate(open(OUTFILE)):
     assert line == '%04d %04d\n' % (i // NUMFILES, i % NUMFILES,)
 
-print 'OK'
+print('OK')
 

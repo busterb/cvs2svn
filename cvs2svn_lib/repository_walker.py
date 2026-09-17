@@ -63,7 +63,7 @@ class _RepositoryWalker(object):
     filename = os.path.join(parent_directory.rcs_path, basename)
     try:
       Ctx().output_option.verify_filename_legal(basename[:-2])
-    except IllegalSVNPathError, e:
+    except IllegalSVNPathError as e:
       raise FatalError(
           'File %r would result in an illegal SVN filename: %s'
           % (filename, e,)
@@ -115,7 +115,7 @@ class _RepositoryWalker(object):
       return self._get_cvs_file(
           parent_directory, basename, file_in_attic=True,
           )
-    except FileInAndOutOfAtticException, e:
+    except FileInAndOutOfAtticException as e:
       if Ctx().retain_conflicting_attic_files:
         logger.warn(
             "%s: %s;\n"
@@ -276,7 +276,7 @@ class _RepositoryWalker(object):
       # characters:
       try:
         Ctx().output_option.verify_filename_legal(fname)
-      except IllegalSVNPathError, e:
+      except IllegalSVNPathError as e:
         raise FatalError(
             'Directory %r would result in an illegal SVN path name: %s'
             % (dirname, e,)

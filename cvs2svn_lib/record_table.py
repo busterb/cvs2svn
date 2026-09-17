@@ -196,7 +196,7 @@ class AbstractRecordTable:
   def iterkeys(self):
     """Yield the keys in the map in key order."""
 
-    for i in xrange(0, self._limit):
+    for i in range(0, self._limit):
       try:
         self[i]
         yield i
@@ -208,7 +208,7 @@ class AbstractRecordTable:
 
     Skip over values that haven't been defined."""
 
-    for i in xrange(0, self._limit):
+    for i in range(0, self._limit):
       try:
         yield self[i]
       except KeyError:

@@ -507,7 +507,7 @@ class SymbolStatistics:
         stats = self.get_stats(lod)
         try:
           stats.check_preferred_parent_allowed(lod)
-        except SymbolPlanException, e:
+        except SymbolPlanException as e:
           logger.error('%s\n' % (e,))
           error_found = True
 

@@ -24,17 +24,12 @@ import sys
 # operator in Python 3.1 (but we use it here anyway).
 
 version_error = """\
-ERROR: cvs2git requires Python 2, version 2.4 or later; it does not
-work with Python 3.  You are currently using"""
+ERROR: cvs2git requires Python 3, version 3.9 or later. You are currently using"""
 
 version_advice = """\
 Please restart cvs2git using a different version of the Python
 interpreter.  Visit http://www.python.org or consult your local system
 administrator if you need help.
-
-HINT: If you already have a usable Python version installed, it might
-be possible to invoke cvs2git with the correct Python interpreter by
-typing something like 'python2.5 """ + sys.argv[0] + """ [...]'.
 """
 
 try:
@@ -48,7 +43,7 @@ except AttributeError:
   sys.stderr.write(version_advice)
   sys.exit(1)
 
-if not ((2,4) <= version < (3,0)):
+if version < (3,9):
   sys.stderr.write(
       version_error + ' version %d.%d.%d.\n'
       % (version[0], version[1], version[2],)
@@ -65,7 +60,7 @@ from cvs2svn_lib.main import git_main
 
 try:
   git_main(os.path.basename(sys.argv[0]), sys.argv[1:])
-except FatalException, e:
+except FatalException as e:
   sys.stderr.write(str(e) + '\n')
   sys.exit(1)
 

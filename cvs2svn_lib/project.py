@@ -39,7 +39,7 @@ class FileInAndOutOfAtticException(Exception):
 def normalize_ttb_path(opt, path, allow_empty=False):
   try:
     return normalize_svn_path(path, allow_empty)
-  except IllegalSVNPathError, e:
+  except IllegalSVNPathError as e:
     raise FatalError('Problem with %s: %s' % (opt, e,))
 
 
@@ -88,7 +88,7 @@ class Project(object):
     for path in initial_directories:
       try:
         path = normalize_svn_path(path, False)
-      except IllegalSVNPathError, e:
+      except IllegalSVNPathError as e:
         raise FatalError(
             'Initial directory %r is not a legal SVN path: %s'
             % (path, e,)
