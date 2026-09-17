@@ -80,21 +80,33 @@ class RevisionChangeset(Changeset):
 
   def create_graph_node(self, cvs_item_to_changeset_id):
     time_range = TimeRange()
-    pred_ids = set()
-    succ_ids = set()
+    all_pred_ids = []
+    all_succ_ids = []
 
     for cvs_item in self.iter_cvs_items():
       time_range.add(cvs_item.timestamp)
+      all_pred_ids.extend(cvs_item.get_pred_ids())
+      all_succ_ids.extend(cvs_item.get_succ_ids())
 
-      for pred_id in cvs_item.get_pred_ids():
-        changeset_id = cvs_item_to_changeset_id.get(pred_id)
-        if changeset_id is not None:
-          pred_ids.add(changeset_id)
+    # One batched lookup instead of one RecordTable query per
+    # predecessor/successor id:
+    changeset_ids = dict(
+        cvs_item_to_changeset_id.get_many(
+            set(all_pred_ids) | set(all_succ_ids)
+            )
+        )
 
-      for succ_id in cvs_item.get_succ_ids():
-        changeset_id = cvs_item_to_changeset_id.get(succ_id)
-        if changeset_id is not None:
-          succ_ids.add(changeset_id)
+    pred_ids = set()
+    for pred_id in all_pred_ids:
+      changeset_id = changeset_ids.get(pred_id)
+      if changeset_id is not None:
+        pred_ids.add(changeset_id)
+
+    succ_ids = set()
+    for succ_id in all_succ_ids:
+      changeset_id = changeset_ids.get(succ_id)
+      if changeset_id is not None:
+        succ_ids.add(changeset_id)
 
     return ChangesetGraphNode(self, time_range, pred_ids, succ_ids)
 
@@ -151,18 +163,31 @@ class OrderedChangeset(Changeset):
     if self.next_id is not None:
       succ_ids.add(self.next_id)
 
+    all_pred_ids = []
+    all_succ_ids = []
+
     for cvs_item in self.iter_cvs_items():
       time_range.add(cvs_item.timestamp)
+      all_pred_ids.extend(cvs_item.get_symbol_pred_ids())
+      all_succ_ids.extend(cvs_item.get_symbol_succ_ids())
 
-      for pred_id in cvs_item.get_symbol_pred_ids():
-        changeset_id = cvs_item_to_changeset_id.get(pred_id)
-        if changeset_id is not None:
-          pred_ids.add(changeset_id)
+    # One batched lookup instead of one RecordTable query per
+    # predecessor/successor id:
+    changeset_ids = dict(
+        cvs_item_to_changeset_id.get_many(
+            set(all_pred_ids) | set(all_succ_ids)
+            )
+        )
 
-      for succ_id in cvs_item.get_symbol_succ_ids():
-        changeset_id = cvs_item_to_changeset_id.get(succ_id)
-        if changeset_id is not None:
-          succ_ids.add(changeset_id)
+    for pred_id in all_pred_ids:
+      changeset_id = changeset_ids.get(pred_id)
+      if changeset_id is not None:
+        pred_ids.add(changeset_id)
+
+    for succ_id in all_succ_ids:
+      changeset_id = changeset_ids.get(succ_id)
+      if changeset_id is not None:
+        succ_ids.add(changeset_id)
 
     return ChangesetGraphNode(self, time_range, pred_ids, succ_ids)
 
@@ -194,19 +219,32 @@ class SymbolChangeset(Changeset):
     return set()
 
   def create_graph_node(self, cvs_item_to_changeset_id):
-    pred_ids = set()
-    succ_ids = set()
+    all_pred_ids = []
+    all_succ_ids = []
 
     for cvs_item in self.iter_cvs_items():
-      for pred_id in cvs_item.get_pred_ids():
-        changeset_id = cvs_item_to_changeset_id.get(pred_id)
-        if changeset_id is not None:
-          pred_ids.add(changeset_id)
+      all_pred_ids.extend(cvs_item.get_pred_ids())
+      all_succ_ids.extend(cvs_item.get_succ_ids())
 
-      for succ_id in cvs_item.get_succ_ids():
-        changeset_id = cvs_item_to_changeset_id.get(succ_id)
-        if changeset_id is not None:
-          succ_ids.add(changeset_id)
+    # One batched lookup instead of one RecordTable query per
+    # predecessor/successor id:
+    changeset_ids = dict(
+        cvs_item_to_changeset_id.get_many(
+            set(all_pred_ids) | set(all_succ_ids)
+            )
+        )
+
+    pred_ids = set()
+    for pred_id in all_pred_ids:
+      changeset_id = changeset_ids.get(pred_id)
+      if changeset_id is not None:
+        pred_ids.add(changeset_id)
+
+    succ_ids = set()
+    for succ_id in all_succ_ids:
+      changeset_id = changeset_ids.get(succ_id)
+      if changeset_id is not None:
+        succ_ids.add(changeset_id)
 
     return ChangesetGraphNode(self, TimeRange(), pred_ids, succ_ids)
 
