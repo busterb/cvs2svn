@@ -1134,6 +1134,28 @@ class RunOptions(object):
       'ctx' : Ctx(),
       'run_options' : self,
       }
+
+    def execfile_(filename, globals=None, locals=None):
+      """A Python 3 stand-in for the removed execfile() builtin.
+
+      Like the builtin it replaces, FILENAME is resolved relative to
+      the process's cwd, not to the location of the file that's
+      calling execfile(). Options files can call execfile() to pull
+      in another options file (e.g. a shared base file); default
+      GLOBALS/LOCALS to G, as Python 2's execfile() defaulted to the
+      caller's own namespace, so variables set by the included file
+      remain visible here."""
+
+      if globals is None:
+        globals = g
+      if locals is None:
+        locals = globals
+      with open(filename) as f:
+        code = compile(f.read(), filename, 'exec')
+      exec(code, globals, locals)
+
+    g['execfile'] = execfile_
+
     with open(options_filename) as f:
       code = compile(f.read(), options_filename, 'exec')
     exec(code, g)
