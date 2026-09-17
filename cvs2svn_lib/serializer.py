@@ -81,21 +81,28 @@ class PrimedPickleSerializer(Serializer):
 
     The Pickler and Unpickler are 'primed' by pre-pickling PRIMER,
     which can be an arbitrary object (e.g., a list of objects that are
-    expected to occur frequently in the objects to be serialized)."""
+    expected to occur frequently in the objects to be serialized).
+
+    This uses the pure-Python pickle._Pickler/_Unpickler rather than
+    the C-accelerated pickle.Pickler/Unpickler: the C implementation's
+    memo is a proxy over an internal array-based table that doesn't
+    get correctly rebuilt from a plain dict assigned to .memo (it
+    raises "Memo value not found" on load), while the pure-Python
+    implementation's memo is a real dict that round-trips correctly."""
 
     f = io.BytesIO()
-    pickler = pickle.Pickler(f, -1)
+    pickler = pickle._Pickler(f, -1)
     pickler.dump(primer)
     self.pickler_memo = pickler.memo
 
-    unpickler = pickle.Unpickler(io.BytesIO(f.getvalue()))
+    unpickler = pickle._Unpickler(io.BytesIO(f.getvalue()))
     unpickler.load()
     self.unpickler_memo = unpickler.memo
 
   def dumpf(self, f, object):
     """Serialize OBJECT to file-like object F."""
 
-    pickler = pickle.Pickler(f, -1)
+    pickler = pickle._Pickler(f, -1)
     pickler.memo = self.pickler_memo.copy()
     pickler.dump(object)
 
@@ -109,7 +116,7 @@ class PrimedPickleSerializer(Serializer):
   def loadf(self, f):
     """Return the next object deserialized from file-like object F."""
 
-    unpickler = pickle.Unpickler(f)
+    unpickler = pickle._Unpickler(f)
     unpickler.memo = self.unpickler_memo.copy()
     return unpickler.load()
 

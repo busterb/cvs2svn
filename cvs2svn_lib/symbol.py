@@ -119,14 +119,14 @@ class Trunk(LineOfDevelopment):
     (self.id, project_id, self.base_path,) = state
     self.project = Ctx()._projects[project_id]
 
-  def __cmp__(self, other):
+  def __lt__(self, other):
     if isinstance(other, Trunk):
-      return cmp(self.project, other.project)
+      return self.project < other.project
     elif isinstance(other, Symbol):
       # Allow Trunk to compare less than Symbols:
-      return -1
+      return True
     else:
-      raise NotImplementedError()
+      return NotImplemented
 
   def __str__(self):
     """For convenience only.  The format is subject to change at any time."""
@@ -169,16 +169,17 @@ class Symbol(AbstractSymbol):
     (self.id, project_id, self.name, self.preferred_parent_id,) = state
     self.project = Ctx()._projects[project_id]
 
-  def __cmp__(self, other):
+  def __lt__(self, other):
     if isinstance(other, Symbol):
-      return cmp(self.project, other.project) \
-             or cmp(self.name, other.name) \
-             or cmp(self.id, other.id)
+      return (
+          (self.project, self.name, self.id)
+          < (other.project, other.name, other.id)
+          )
     elif isinstance(other, Trunk):
       # Allow Symbols to compare greater than Trunk:
-      return +1
+      return False
     else:
-      raise NotImplementedError()
+      return NotImplemented
 
   def __str__(self):
     return self.name

@@ -257,8 +257,7 @@ class _Stats:
 
   def __repr__(self):
     retval = ['%s\n  possible parents:\n' % (self,)]
-    parent_counts = self.possible_parents.items()
-    parent_counts.sort(lambda a,b: - cmp(a[1], b[1]))
+    parent_counts = sorted(self.possible_parents.items(), key=lambda a: -a[1])
     for (symbol, count) in parent_counts:
       if isinstance(symbol, Trunk):
         retval.append('    trunk : %d\n' % count)
@@ -354,7 +353,7 @@ class SymbolStatisticsCollector:
     """Store the stats database to the SYMBOL_STATISTICS file."""
 
     f = open(artifact_manager.get_temp_file(config.SYMBOL_STATISTICS), 'wb')
-    pickle.dump(self._stats.values(), f, -1)
+    pickle.dump(list(self._stats.values()), f, -1)
     f.close()
     self._stats = None
 

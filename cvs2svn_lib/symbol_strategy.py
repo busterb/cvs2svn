@@ -524,8 +524,9 @@ class ManualSymbolRule(StrategyRule):
       elif pp.name == parent_lod_name:
         return pp
     else:
-      parent_counts = stats.possible_parents.items()
-      parent_counts.sort(lambda a,b: - cmp(a[1], b[1]))
+      parent_counts = sorted(
+          stats.possible_parents.items(), key=lambda a: -a[1]
+          )
       lines = [
           '%s is not a valid parent for %s;'
               % (parent_lod_name, stats.lod,),

@@ -35,7 +35,7 @@ main program for several reasons:
 import sys
 import os
 import subprocess
-import cPickle as pickle
+import pickle
 
 from cvs2svn_lib import config
 from cvs2svn_lib.common import FatalError

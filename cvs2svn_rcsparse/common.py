@@ -13,7 +13,19 @@
 """common.py: common classes and functions for the RCS parsing tools."""
 
 import calendar
-import string
+
+
+def _to_str(b):
+  """Decode a raw RCS token (bytes) to str.
+
+  RCS revision numbers, tag names, states, and dates are pure ASCII
+  per the RCS file format, but we use surrogateescape so that any
+  unexpected non-ASCII byte round-trips losslessly instead of raising
+  (author/log/file-content text, whose encoding really is unknown,
+  are deliberately left as bytes and decoded later, with guessed
+  encodings, by CleanMetadataPass)."""
+
+  return b.decode('utf8', 'surrogateescape')
 
 class Sink:
   """Interface to be implemented by clients.  The RCS parser calls this as
@@ -250,13 +262,14 @@ class _Parser:
   def _read_until_semicolon(self):
     """Read all tokens up to and including the next semicolon token.
 
-    Return the tokens (not including the semicolon) as a list."""
+    Return the tokens (not including the semicolon), as bytes, as a
+    list."""
 
     tokens = []
 
     while 1:
       token = self.ts.get()
-      if token == ';':
+      if token == b';':
         break
       tokens.append(token)
 
@@ -264,66 +277,66 @@ class _Parser:
 
   def _parse_admin_head(self, token):
     rev = self.ts.get()
-    if rev == ';':
+    if rev == b';':
       # The head revision is not specified.  Just drop the semicolon
       # on the floor.
       pass
     else:
-      self.sink.set_head_revision(rev)
-      self.ts.match(';')
+      self.sink.set_head_revision(_to_str(rev))
+      self.ts.match(b';')
 
   def _parse_admin_branch(self, token):
     branch = self.ts.get()
-    if branch != ';':
-      self.sink.set_principal_branch(branch)
-      self.ts.match(';')
+    if branch != b';':
+      self.sink.set_principal_branch(_to_str(branch))
+      self.ts.match(b';')
 
   def _parse_admin_access(self, token):
     accessors = self._read_until_semicolon()
     if accessors:
-      self.sink.set_access(accessors)
+      self.sink.set_access([_to_str(a) for a in accessors])
 
   def _parse_admin_symbols(self, token):
     while 1:
       tag_name = self.ts.get()
-      if tag_name == ';':
+      if tag_name == b';':
         break
-      self.ts.match(':')
+      self.ts.match(b':')
       tag_rev = self.ts.get()
-      self.sink.define_tag(tag_name, tag_rev)
+      self.sink.define_tag(_to_str(tag_name), _to_str(tag_rev))
 
   def _parse_admin_locks(self, token):
     while 1:
       locker = self.ts.get()
-      if locker == ';':
+      if locker == b';':
         break
-      self.ts.match(':')
+      self.ts.match(b':')
       rev = self.ts.get()
-      self.sink.set_locker(rev, locker)
+      self.sink.set_locker(_to_str(rev), _to_str(locker))
 
   def _parse_admin_strict(self, token):
     self.sink.set_locking("strict")
-    self.ts.match(';')
+    self.ts.match(b';')
 
   def _parse_admin_comment(self, token):
     self.sink.set_comment(self.ts.get())
-    self.ts.match(';')
+    self.ts.match(b';')
 
   def _parse_admin_expand(self, token):
     expand_mode = self.ts.get()
-    self.sink.set_expansion(expand_mode)
-    self.ts.match(';')
+    self.sink.set_expansion(_to_str(expand_mode))
+    self.ts.match(b';')
 
   admin_token_map = {
-      'head' : _parse_admin_head,
-      'branch' : _parse_admin_branch,
-      'access' : _parse_admin_access,
-      'symbols' : _parse_admin_symbols,
-      'locks' : _parse_admin_locks,
-      'strict' : _parse_admin_strict,
-      'comment' : _parse_admin_comment,
-      'expand' : _parse_admin_expand,
-      'desc' : None,
+      b'head' : _parse_admin_head,
+      b'branch' : _parse_admin_branch,
+      b'access' : _parse_admin_access,
+      b'symbols' : _parse_admin_symbols,
+      b'locks' : _parse_admin_locks,
+      b'strict' : _parse_admin_strict,
+      b'comment' : _parse_admin_comment,
+      b'expand' : _parse_admin_expand,
+      b'desc' : None,
       }
 
   def parse_rcs_admin(self):
@@ -335,13 +348,13 @@ class _Parser:
         f = self.admin_token_map[token]
       except KeyError:
         # We're done once we reach the description of the RCS tree
-        if token[0] in string.digits:
+        if 0x30 <= token[0] <= 0x39:  # ASCII '0'-'9'
           self.ts.unget(token)
           return
         else:
           # Chew up "newphrase"
           # warn("Unexpected RCS token: $token\n")
-          while self.ts.get() != ';':
+          while self.ts.get() != b';':
             pass
       else:
         if f is None:
@@ -352,18 +365,18 @@ class _Parser:
 
   def _parse_rcs_tree_entry(self, revision):
     # Parse date
-    self.ts.match('date')
+    self.ts.match(b'date')
     date = self.ts.get()
-    self.ts.match(';')
+    self.ts.match(b';')
 
     # Convert date into standard UNIX time format (seconds since epoch)
-    date_fields = string.split(date, '.')
+    date_fields = date.split(b'.')
     # According to rcsfile(5): the year "contains just the last two
     # digits of the year for years from 1900 through 1999, and all the
     # digits of years thereafter".
     if len(date_fields[0]) == 2:
-      date_fields[0] = '19' + date_fields[0]
-    date_fields = map(string.atoi, date_fields)
+      date_fields[0] = b'19' + date_fields[0]
+    date_fields = list(map(int, date_fields))
     EPOCH = 1970
     if date_fields[0] < EPOCH:
       raise ValueError('invalid year for revision %s' % (revision,))
@@ -372,34 +385,36 @@ class _Parser:
     except ValueError as e:
       raise ValueError('invalid date for revision %s: %s' % (revision, e,))
 
-    # Parse author
+    # Parse author.  Left as bytes: the encoding is unknown, and
+    # CleanMetadataPass decodes it later using guessed encodings.
     ### NOTE: authors containing whitespace are violations of the
     ### RCS specification.  We are making an allowance here because
     ### CVSNT is known to produce these sorts of authors.
-    self.ts.match('author')
-    author = ' '.join(self._read_until_semicolon())
+    self.ts.match(b'author')
+    author = b' '.join(self._read_until_semicolon())
 
     # Parse state
-    self.ts.match('state')
-    state = ''
+    self.ts.match(b'state')
+    state = b''
     while 1:
       token = self.ts.get()
-      if token == ';':
+      if token == b';':
         break
-      state = state + token + ' '
+      state = state + token + b' '
     state = state[:-1]   # toss the trailing space
 
     # Parse branches
-    self.ts.match('branches')
-    branches = self._read_until_semicolon()
+    self.ts.match(b'branches')
+    branches = [_to_str(b) for b in self._read_until_semicolon()]
 
     # Parse revision of next delta in chain
-    self.ts.match('next')
+    self.ts.match(b'next')
     next = self.ts.get()
-    if next == ';':
+    if next == b';':
       next = None
     else:
-      self.ts.match(';')
+      next = _to_str(next)
+      self.ts.match(b';')
 
     # there are some files with extra tags in them. for example:
     #    owner	640;
@@ -410,28 +425,29 @@ class _Parser:
     # this is "newphrase" in RCSFILE(5). we just want to skip over these.
     while 1:
       token = self.ts.get()
-      if token == 'desc' or token[0] in string.digits:
+      if token == b'desc' or 0x30 <= token[0] <= 0x39:
         self.ts.unget(token)
         break
       # consume everything up to the semicolon
       self._read_until_semicolon()
 
-    self.sink.define_revision(revision, timestamp, author, state, branches,
-                              next)
+    self.sink.define_revision(
+        revision, timestamp, author, _to_str(state), branches, next
+        )
 
   def parse_rcs_tree(self):
     while 1:
       revision = self.ts.get()
 
       # End of RCS tree description ?
-      if revision == 'desc':
+      if revision == b'desc':
         self.ts.unget(revision)
         return
 
-      self._parse_rcs_tree_entry(revision)
+      self._parse_rcs_tree_entry(_to_str(revision))
 
   def parse_rcs_description(self):
-    self.ts.match('desc')
+    self.ts.match(b'desc')
     self.sink.set_description(self.ts.get())
 
   def parse_rcs_deltatext(self):
@@ -441,13 +457,13 @@ class _Parser:
         # EOF
         break
       text, sym2, log, sym1 = self.ts.mget(4)
-      if sym1 != 'log':
+      if sym1 != b'log':
         print(repr((text[:100], sym2[:100], log[:100], sym1[:100])))
-        raise RCSExpected(sym1, 'log')
-      if sym2 != 'text':
-        raise RCSExpected(sym2, 'text')
+        raise RCSExpected(sym1, b'log')
+      if sym2 != b'text':
+        raise RCSExpected(sym2, b'text')
       ### need to add code to chew up "newphrase"
-      self.sink.set_revision_info(revision, log, text)
+      self.sink.set_revision_info(_to_str(revision), log, text)
 
   def parse(self, file, sink):
     """Parse an RCS file.

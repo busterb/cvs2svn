@@ -57,11 +57,11 @@ class GitRevisionCollector(RevisionCollector):
     fulltext = self.revision_reader.get_content(cvs_rev)
 
     mark = self._mark_generator.gen_id()
-    self.dump_file.write('blob\n')
-    self.dump_file.write('mark :%d\n' % (mark,))
-    self.dump_file.write('data %d\n' % (len(fulltext),))
+    self.dump_file.write(b'blob\n')
+    self.dump_file.write(b'mark :%d\n' % (mark,))
+    self.dump_file.write(b'data %d\n' % (len(fulltext),))
     self.dump_file.write(fulltext)
-    self.dump_file.write('\n')
+    self.dump_file.write(b'\n')
     cvs_rev.revision_reader_token = mark
 
   def _process_symbol(self, cvs_symbol, cvs_file_items):

@@ -222,10 +222,8 @@ class DVCSOutputOption(OutputOption):
 
     # Sort the sources so that the branch that serves most often as
     # parent is processed first:
-    lod_ranges = lod_range_maps.items()
-    lod_ranges.sort(
-        lambda t1, t2:
-        -cmp(len(t1[1]), len(t2[1])) or cmp(t1[0], t2[0])
+    lod_ranges = sorted(
+        lod_range_maps.items(), key=lambda t: (-len(t[1]), t[0])
         )
 
     source_groups = []
@@ -235,7 +233,7 @@ class DVCSOutputOption(OutputOption):
         (source_lod, revnum, score) = revision_scores.get_best_revnum()
         assert source_lod == lod
         cvs_symbols = []
-        for (cvs_symbol, range) in lod_range_map.items():
+        for (cvs_symbol, range) in list(lod_range_map.items()):
           if revnum in range:
             cvs_symbols.append(cvs_symbol)
             del lod_range_map[cvs_symbol]

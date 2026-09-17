@@ -51,17 +51,19 @@ class CVSRevisionReader(AbstractRCSRevisionReader):
     self.cvs_executable = cvs_executable
 
     if global_options is None:
+      last_error = None
       for global_options in self._possible_global_options:
         try:
           self._check_cvs_runs(global_options)
         except CommandFailedException as e:
-          pass
+          last_error = e
         else:
           break
       else:
         raise FatalError(
             '%s\n'
-            'Please check that cvs is installed and in your PATH.' % (e,)
+            'Please check that cvs is installed and in your PATH.'
+            % (last_error,)
             )
     else:
       try:

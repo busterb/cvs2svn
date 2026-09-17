@@ -14,105 +14,106 @@
 """This module contains database facilities used by cvs2svn."""
 
 
-import cPickle
+import os
+import sqlite3
+import pickle
 
 from cvs2svn_lib.common import DB_OPEN_READ
 from cvs2svn_lib.common import DB_OPEN_WRITE
 from cvs2svn_lib.common import DB_OPEN_NEW
-from cvs2svn_lib.record_table import FileOffsetPacker
-from cvs2svn_lib.record_table import RecordTable
 
 
 class IndexedDatabase:
-  """A file of objects that are written sequentially and read randomly.
+  """A store of objects indexed by small non-negative integers.
 
-  The objects are indexed by small non-negative integers, and a
-  RecordTable is used to store the index -> fileoffset map.
-  fileoffset=0 is used to represent an empty record.  (An offset of 0
-  cannot occur for a legitimate record because the serializer is
-  written there.)
+  This is a SQLite-backed replacement for the historical two-file
+  design (a sequential pickle stream plus a hand-rolled offset-index
+  file): SQLite's own B-tree already gives O(log n) random access by
+  integer id, so the separate offset index is unnecessary, and one
+  file replaces two.
 
-  The main file consists of a sequence of pickles (or other serialized
-  data format).  The zeroth record is a pickled Serializer.
-  Subsequent ones are objects serialized using the serializer.  The
-  offset of each object in the file is stored to an index table so
-  that the data can later be retrieved randomly.
+  INDEX_FILENAME is accepted for compatibility with callers built
+  around the old two-file layout (and so that artifact-manager's
+  unconditional cleanup unlink() of that filename still succeeds); it
+  is not otherwise used -- all data lives in the SQLite file at
+  FILENAME."""
 
-  Objects are always stored to the end of the file.  If an object is
-  deleted or overwritten, the fact is recorded in the index_table but
-  the space in the pickle file is not garbage collected.  This has the
-  advantage that one can create a modified version of a database that
-  shares the main data file with an old version by copying the index
-  file.  But it has the disadvantage that space is wasted whenever
-  objects are written multiple times."""
+  # How many writes to allow before an intermediate commit, so that a
+  # single pass's transaction doesn't grow unboundedly for very large
+  # repositories:
+  _COMMIT_INTERVAL = 10000
 
   def __init__(self, filename, index_filename, mode, serializer=None):
-    """Initialize an IndexedDatabase, writing the serializer if necessary.
-
-    SERIALIZER is only used if MODE is DB_OPEN_NEW; otherwise the
-    serializer is read from the file."""
-
     self.filename = filename
     self.index_filename = index_filename
     self.mode = mode
+    self._pending_writes = 0
+
+    # index_filename is a vestige of the pre-SQLite two-file layout;
+    # keep an (empty) marker file there so that artifact-manager's
+    # cleanup, which unconditionally unlinks it, doesn't fail.
+    if not os.path.exists(index_filename):
+      open(index_filename, 'wb').close()
+
     if self.mode == DB_OPEN_NEW:
-      self.f = open(self.filename, 'wb+')
-    elif self.mode == DB_OPEN_WRITE:
-      self.f = open(self.filename, 'rb+')
-    elif self.mode == DB_OPEN_READ:
-      self.f = open(self.filename, 'rb')
+      if os.path.exists(self.filename):
+        os.unlink(self.filename)
+      self.db = sqlite3.connect(self.filename)
+      self.db.execute(
+          'CREATE TABLE items (id INTEGER PRIMARY KEY, data BLOB)'
+          )
+      self.db.execute(
+          'CREATE TABLE meta (key TEXT PRIMARY KEY, value BLOB)'
+          )
+      assert serializer is not None
+      self.serializer = serializer
+      self.db.execute(
+          'INSERT INTO meta (key, value) VALUES (?, ?)',
+          ('serializer', pickle.dumps(self.serializer, -1)),
+          )
+      self.db.commit()
+    elif self.mode in (DB_OPEN_WRITE, DB_OPEN_READ):
+      self.db = sqlite3.connect(self.filename)
+      row = self.db.execute(
+          'SELECT value FROM meta WHERE key = ?', ('serializer',)
+          ).fetchone()
+      self.serializer = pickle.loads(row[0])
     else:
       raise RuntimeError('Invalid mode %r' % self.mode)
 
-    self.index_table = RecordTable(
-        self.index_filename, self.mode, FileOffsetPacker()
-        )
-
-    if self.mode == DB_OPEN_NEW:
-      assert serializer is not None
-      self.serializer = serializer
-      cPickle.dump(self.serializer, self.f, -1)
-    else:
-      # Read the memo from the first pickle:
-      self.serializer = cPickle.load(self.f)
-
-    # Seek to the end of the file, and record that position:
-    self.f.seek(0, 2)
-    self.fp = self.f.tell()
-    self.eofp = self.fp
+  def _maybe_commit(self):
+    self._pending_writes += 1
+    if self._pending_writes >= self._COMMIT_INTERVAL:
+      self.db.commit()
+      self._pending_writes = 0
 
   def __setitem__(self, index, item):
     """Write ITEM into the database indexed by INDEX."""
 
-    # Make sure we're at the end of the file:
-    if self.fp != self.eofp:
-      self.f.seek(self.eofp)
-    self.index_table[index] = self.eofp
-    s = self.serializer.dumps(item)
-    self.f.write(s)
-    self.eofp += len(s)
-    self.fp = self.eofp
+    self.db.execute(
+        'INSERT OR REPLACE INTO items (id, data) VALUES (?, ?)',
+        (index, self.serializer.dumps(item)),
+        )
+    self._maybe_commit()
 
-  def _fetch(self, offset):
-    if self.fp != offset:
-      self.f.seek(offset)
-
-    # There is no easy way to tell how much data will be read, so just
-    # indicate that we don't know the current file pointer:
-    self.fp = None
-
-    return self.serializer.loadf(self.f)
+  def _fetch(self, data):
+    return self.serializer.loads(data)
 
   def iterkeys(self):
-    return self.index_table.iterkeys()
+    for row in self.db.execute('SELECT id FROM items ORDER BY id'):
+      yield row[0]
 
   def itervalues(self):
-    for offset in self.index_table.itervalues():
-      yield self._fetch(offset)
+    for row in self.db.execute('SELECT data FROM items ORDER BY id'):
+      yield self._fetch(row[0])
 
   def __getitem__(self, index):
-    offset = self.index_table[index]
-    return self._fetch(offset)
+    row = self.db.execute(
+        'SELECT data FROM items WHERE id = ?', (index,)
+        ).fetchone()
+    if row is None:
+      raise KeyError(index)
+    return self._fetch(row[0])
 
   def get(self, item, default=None):
     try:
@@ -125,27 +126,36 @@ class IndexedDatabase:
 
     Yield (index,default) for indexes with no defined values."""
 
-    offsets = []
-    for (index, offset) in self.index_table.get_many(indexes):
-      if offset is None:
-        yield (index, default)
-      else:
-        offsets.append((offset, index))
+    indexes = list(indexes)
+    found = {}
+    # Chunk to stay under SQLite's default bound on the number of
+    # parameters in a single statement:
+    CHUNK_SIZE = 500
+    for start in range(0, len(indexes), CHUNK_SIZE):
+      chunk = indexes[start:start + CHUNK_SIZE]
+      placeholders = ','.join('?' * len(chunk))
+      for (id, data) in self.db.execute(
+          'SELECT id, data FROM items WHERE id IN (%s)' % (placeholders,),
+          chunk,
+          ):
+        found[id] = data
 
-    # Sort the offsets to reduce disk seeking:
-    offsets.sort()
-    for (offset,index) in offsets:
-      yield (index, self._fetch(offset))
+    for index in indexes:
+      if index in found:
+        yield (index, self._fetch(found[index]))
+      else:
+        yield (index, default)
 
   def __delitem__(self, index):
-    # We don't actually free the data in self.f.
-    del self.index_table[index]
+    cursor = self.db.execute('DELETE FROM items WHERE id = ?', (index,))
+    if cursor.rowcount == 0:
+      raise KeyError(index)
+    self._maybe_commit()
 
   def close(self):
-    self.index_table.close()
-    self.index_table = None
-    self.f.close()
-    self.f = None
+    self.db.commit()
+    self.db.close()
+    self.db = None
 
   def __str__(self):
     return 'IndexedDatabase(%r)' % (self.filename,)
@@ -163,5 +173,3 @@ class IndexedStore(IndexedDatabase):
     """Write ITEM into the database indexed by ITEM.id."""
 
     self[item.id] = item
-
-

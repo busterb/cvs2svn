@@ -82,16 +82,20 @@ class ChangesetGraphLink(object):
 
     return self.pred_links != 0 or self.succ_links != 0
 
-  def __cmp__(self, other):
+  def __lt__(self, other):
     """Compare SELF with OTHER in terms of which would be better to break.
 
     The one that is better to break is considered the lesser."""
 
-    return (
-        - cmp(int(self.is_breakable()), int(other.is_breakable()))
-        or cmp(self.passthru_links, other.passthru_links)
-        or cmp(self.get_links_to_move(), other.get_links_to_move())
+    self_key = (
+        not self.is_breakable(), self.passthru_links,
+        self.get_links_to_move(),
         )
+    other_key = (
+        not other.is_breakable(), other.passthru_links,
+        other.get_links_to_move(),
+        )
+    return self_key < other_key
 
   def break_changeset(self, changeset_key_generator):
     """Break up self.changeset and return the fragments.

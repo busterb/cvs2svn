@@ -316,7 +316,7 @@ class TextRecordDatabase:
     self.deferred_deletes = None
 
   def __getstate__(self):
-    return (self.text_records.values(),)
+    return (list(self.text_records.values()),)
 
   def __setstate__(self, state):
     (text_records,) = state
@@ -623,6 +623,21 @@ class InternalRevisionCollector(RevisionCollector):
     self._rcs_trees.close()
 
 
+class _NoDeleteIndexedDatabase(IndexedDatabase):
+  """An IndexedDatabase whose __delitem__() is a no-op.
+
+  Used for the read-only delta store during OutputPass: deletes are
+  requested (to free memory-side refcounts) but must not touch the
+  on-disk database, which isn't open for writing.  A subclass is used
+  rather than an instance-level monkey-patch of __delitem__ because,
+  unlike Python 2's old-style classes, Python 3 always looks up
+  special methods on the type for implicit del db[key] syntax, so an
+  instance attribute override would silently never be called."""
+
+  def __delitem__(self, id):
+    pass
+
+
 class InternalRevisionReader(RevisionReader):
   """A RevisionReader that reads the contents from an own delta store."""
 
@@ -651,12 +666,11 @@ class InternalRevisionReader(RevisionReader):
         )
 
   def start(self):
-    self._delta_db = IndexedDatabase(
+    self._delta_db = _NoDeleteIndexedDatabase(
         artifact_manager.get_temp_file(config.RCS_DELTAS_STORE),
         artifact_manager.get_temp_file(config.RCS_DELTAS_INDEX_TABLE),
         DB_OPEN_READ,
         )
-    self._delta_db.__delitem__ = lambda id: None
     self._tree_db = IndexedDatabase(
         artifact_manager.get_temp_file(config.RCS_TREES_STORE),
         artifact_manager.get_temp_file(config.RCS_TREES_INDEX_TABLE),

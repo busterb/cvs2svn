@@ -78,7 +78,7 @@ class CVSPathDatabase:
     if self.mode == DB_OPEN_NEW:
       self.set_cvs_path_ordinals()
       f = open(artifact_manager.get_temp_file(config.CVS_PATHS_DB), 'wb')
-      pickle.dump(self._cvs_paths.values(), f, -1)
+      pickle.dump(list(self._cvs_paths.values()), f, -1)
       f.close()
 
     self._cvs_paths = None

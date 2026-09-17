@@ -14,72 +14,31 @@
 """This module contains database facilities used by cvs2svn."""
 
 
-import sys
 import os
-import cPickle
+import sqlite3
+import pickle
 
 from cvs2svn_lib.common import DB_OPEN_NEW
-from cvs2svn_lib.common import warning_prefix
-from cvs2svn_lib.common import error_prefix
-from cvs2svn_lib.log import logger
-
-
-# DBM module selection
-
-# 1. If we have bsddb3, it is probably newer than bsddb.  Fake bsddb = bsddb3,
-#    so that the dbhash module used by anydbm will use bsddb3.
-try:
-  import bsddb3
-  sys.modules['bsddb'] = bsddb3
-except ImportError:
-  pass
-
-# 2. These DBM modules are not good for cvs2svn.
-import anydbm
-if anydbm._defaultmod.__name__ in ['dumbdbm', 'dbm']:
-  logger.error(
-      '%s: cvs2svn uses the anydbm package, which depends on lower level '
-          'dbm\n'
-      'libraries.  Your system has %s, with which cvs2svn is known to have\n'
-      'problems.  To use cvs2svn, you must install a Python dbm library '
-          'other than\n'
-      'dumbdbm or dbm.  See '
-          'http://python.org/doc/current/lib/module-anydbm.html\n'
-      'for more information.\n'
-      % (error_prefix, anydbm._defaultmod.__name__,)
-      )
-  sys.exit(1)
-
-# 3. If we are using the old bsddb185 module, then try prefer gdbm instead.
-#    Unfortunately, gdbm appears not to be trouble free, either.
-if hasattr(anydbm._defaultmod, 'bsddb') \
-    and not hasattr(anydbm._defaultmod.bsddb, '__version__'):
-  try:
-    gdbm = __import__('gdbm')
-  except ImportError:
-    logger.warn(
-        '%s: The version of the bsddb module found on your computer '
-            'has been\n'
-        'reported to malfunction on some datasets, causing KeyError '
-            'exceptions.\n'
-        % (warning_prefix,)
-        )
-  else:
-    anydbm._defaultmod = gdbm
 
 
 class Database:
-  """A database that uses a Serializer to store objects of a certain type.
+  """A key-value database that uses a Serializer to store objects.
 
-  The serializer is stored in the database under the key
-  self.serializer_key.  (This implies that self.serializer_key may not
-  be used as a key for normal entries.)
+  The serializer is stored in the database under self.serializer_key.
+  (This implies that self.serializer_key may not be used as a key for
+  normal entries.)
 
-  The backing database is an anydbm-based DBM.
-
-  """
+  The backing store is a single SQLite database file, opened in
+  autocommit-free mode: writes accumulate in the current transaction
+  and are made durable by close() (or periodically, to bound how much
+  uncommitted data a single pass can accumulate)."""
 
   serializer_key = '_.%$1\t;_ '
+
+  # How many writes to allow before an intermediate commit, so that a
+  # single pass's transaction doesn't grow unboundedly for very large
+  # repositories:
+  _COMMIT_INTERVAL = 10000
 
   def __init__(self, filename, mode, serializer=None):
     """Constructor.
@@ -87,62 +46,74 @@ class Database:
     The database stores its Serializer, so none needs to be supplied
     when opening an existing database."""
 
-    # pybsddb3 has a bug which prevents it from working with
-    # Berkeley DB 4.2 if you open the db with 'n' ("new").  This
-    # causes the DB_TRUNCATE flag to be passed, which is disallowed
-    # for databases protected by lock and transaction support
-    # (bsddb databases use locking from bsddb version 4.2.4 onwards).
-    #
-    # Therefore, manually perform the removal (we can do this, because
-    # we know that for bsddb - but *not* anydbm in general - the database
-    # consists of one file with the name we specify, rather than several
-    # based on that name).
-    if mode == DB_OPEN_NEW and anydbm._defaultmod.__name__ == 'dbhash':
-      if os.path.isfile(filename):
-        os.unlink(filename)
-      self.db = anydbm.open(filename, 'c')
-    else:
-      self.db = anydbm.open(filename, mode)
-
-    # Import implementations for many mapping interface methods.
-    for meth_name in ('__delitem__',
-        '__iter__', 'has_key', '__contains__', 'iterkeys', 'clear'):
-      meth_ref = getattr(self.db, meth_name, None)
-      if meth_ref:
-        setattr(self, meth_name, meth_ref)
+    self.filename = filename
+    self.mode = mode
+    self._pending_writes = 0
 
     if mode == DB_OPEN_NEW:
+      if os.path.exists(filename):
+        os.unlink(filename)
+      self.db = sqlite3.connect(filename)
+      self.db.execute(
+          'CREATE TABLE kv (key BLOB PRIMARY KEY, value BLOB)'
+          )
       self.serializer = serializer
-      self.db[self.serializer_key] = cPickle.dumps(self.serializer)
+      self.db.execute(
+          'INSERT INTO kv (key, value) VALUES (?, ?)',
+          (self.serializer_key, pickle.dumps(self.serializer, -1)),
+          )
+      self.db.commit()
     else:
-      self.serializer = cPickle.loads(self.db[self.serializer_key])
+      self.db = sqlite3.connect(filename)
+      row = self.db.execute(
+          'SELECT value FROM kv WHERE key = ?', (self.serializer_key,)
+          ).fetchone()
+      self.serializer = pickle.loads(row[0])
+
+  def _maybe_commit(self):
+    self._pending_writes += 1
+    if self._pending_writes >= self._COMMIT_INTERVAL:
+      self.db.commit()
+      self._pending_writes = 0
 
   def __getitem__(self, key):
-    return self.serializer.loads(self.db[key])
+    row = self.db.execute(
+        'SELECT value FROM kv WHERE key = ?', (key,)
+        ).fetchone()
+    if row is None:
+      raise KeyError(key)
+    return self.serializer.loads(row[0])
 
   def __setitem__(self, key, value):
-    self.db[key] = self.serializer.dumps(value)
+    self.db.execute(
+        'INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)',
+        (key, self.serializer.dumps(value)),
+        )
+    self._maybe_commit()
 
   def __delitem__(self, key):
-    # gdbm defines a __delitem__ method, but it cannot be assigned.  So
-    # this method provides a fallback definition via explicit delegation:
-    del self.db[key]
+    cursor = self.db.execute('DELETE FROM kv WHERE key = ?', (key,))
+    if cursor.rowcount == 0:
+      raise KeyError(key)
+    self._maybe_commit()
 
   def keys(self):
-    retval = self.db.keys()
-    retval.remove(self.serializer_key)
-    return retval
+    return [
+        row[0]
+        for row in self.db.execute(
+            'SELECT key FROM kv WHERE key != ?', (self.serializer_key,)
+            )
+        ]
 
   def __iter__(self):
     for key in self.keys():
       yield key
 
   def has_key(self, key):
-    try:
-      self.db[key]
-      return True
-    except KeyError:
-      return False
+    row = self.db.execute(
+        'SELECT 1 FROM kv WHERE key = ?', (key,)
+        ).fetchone()
+    return row is not None
 
   def __contains__(self, key):
     return self.has_key(key)
@@ -151,8 +122,8 @@ class Database:
     return self.__iter__()
 
   def clear(self):
-    for key in self.keys():
-      del self[key]
+    self.db.execute('DELETE FROM kv WHERE key != ?', (self.serializer_key,))
+    self._maybe_commit()
 
   def items(self):
     return [(key, self[key],) for key in self.keys()]
@@ -167,7 +138,6 @@ class Database:
       return default
 
   def close(self):
+    self.db.commit()
     self.db.close()
     self.db = None
-
-

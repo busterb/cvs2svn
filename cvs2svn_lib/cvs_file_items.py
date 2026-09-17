@@ -143,7 +143,7 @@ class CVSFileItems(object):
           self.original_ids[cvs_item.rev] = cvs_item.id
 
   def __getstate__(self):
-    return (self.cvs_file.id, self.values(), self.original_ids,)
+    return (self.cvs_file.id, list(self.values()), self.original_ids,)
 
   def __setstate__(self, state):
     (cvs_file_id, cvs_items, original_ids,) = state
@@ -619,12 +619,12 @@ class CVSFileItems(object):
     log_msg = metadata_db[cvs_item.metadata_id].log_msg
     return bool(
         re.match(
-            r'file .* was initially added on branch .*\.\n$',
+            rb'file .* was initially added on branch .*\.\n$',
             log_msg,
             )
         or re.match(
             # This variant commit message was reported by one user:
-            r'file .* was added on branch .*\n$',
+            rb'file .* was added on branch .*\n$',
             log_msg,
             )
         )
@@ -681,9 +681,9 @@ class CVSFileItems(object):
 
     log_msg = metadata_db[cvs_revision.metadata_id].log_msg
     return bool(re.match(
-        r'file .* was added on branch .* on '
-        r'\d{4}\-\d{2}\-\d{2} \d{2}\:\d{2}\:\d{2}( [\+\-]\d{4})?'
-        '\n$',
+        rb'file .* was added on branch .* on '
+        rb'\d{4}\-\d{2}\-\d{2} \d{2}\:\d{2}\:\d{2}( [\+\-]\d{4})?'
+        rb'\n$',
         log_msg,
         ))
 

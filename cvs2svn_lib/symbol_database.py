@@ -60,6 +60,6 @@ def create_symbol_database(symbols):
   containing Trunk and TypedSymbol objects."""
 
   f = open(artifact_manager.get_temp_file(config.SYMBOL_DB), 'wb')
-  pickle.dump(symbols, f, -1)
+  pickle.dump(list(symbols), f, -1)
   f.close()
 

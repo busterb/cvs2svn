@@ -355,10 +355,15 @@ class ChangesetGraph(object):
       # If there are any nodes left in the graph, then there must be
       # at least one cycle.  Find a cycle and process it.
 
-      # This might raise StopIteration, but that indicates that the
-      # graph has been fully consumed, so we just let the exception
-      # escape.
-      start_node_id = next(iter(self.nodes))
+      # If self.nodes is empty, the graph has been fully consumed and
+      # this generator is done.  (PEP 479 turns an escaping
+      # StopIteration into a RuntimeError if it isn't caught here, so
+      # -- unlike in the Python 2 original -- we can't just let it
+      # propagate.)
+      try:
+        start_node_id = next(iter(self.nodes))
+      except StopIteration:
+        return
 
       cycle = self.find_cycle(start_node_id)
 

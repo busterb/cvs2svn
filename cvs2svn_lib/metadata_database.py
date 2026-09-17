@@ -80,13 +80,17 @@ class MetadataLogger:
     the unique id.)  If there is no such record, create one and return
     its newly-generated id."""
 
+    # author and log_msg arrive as UTF-8 bytes (see
+    # CleanMetadataPass._get_clean_author()/_get_clean_log_msg());
+    # project.id and branch_name are plain ints/str.  Normalize
+    # everything to bytes before hashing.
     key = [author, log_msg]
     if not Ctx().cross_project_commits:
-      key.append('%x' % project.id)
+      key.append(('%x' % project.id).encode('ascii'))
     if not Ctx().cross_branch_commits:
-      key.append(branch_name or '')
+      key.append((branch_name or '').encode('utf8'))
 
-    digest = sha1('\0'.join(key)).digest()
+    digest = sha1(b'\0'.join(key)).digest()
     try:
       # See if it is already known:
       return self._digest_to_id[digest]

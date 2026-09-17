@@ -49,11 +49,15 @@ class _KeywordExpander:
     self.cvs_rev = cvs_rev
 
   def __call__(self, match):
-    return '$%s: %s $' % (
-        match.group(1), getattr(self, match.group(1).lower())(),
-        )
+    keyword = match.group(1)
+    value = getattr(self, keyword.decode('ascii').lower())()
+    if not isinstance(value, bytes):
+      value = value.encode('utf8')
+    return b'$' + keyword + b': ' + value + b' $'
 
   def author(self):
+    # Left as bytes: author is UTF-8 bytes throughout the metadata
+    # pipeline (see CleanMetadataPass._get_clean_author()).
     return Ctx()._metadata_db[self.cvs_rev.metadata_id].original_author
 
   def date(self):
@@ -102,13 +106,13 @@ class _KeywordExpander:
     return 'Exp'
 
 
-_kws = 'Author|Date|Header|Id|Locker|Log|Name|RCSfile|Revision|Source|State'
-_kw_re = re.compile(r'\$(' + _kws + r'):[^$\n]*\$')
-_kwo_re = re.compile(r'\$(' + _kws + r')(:[^$\n]*)?\$')
+_kws = b'Author|Date|Header|Id|Locker|Log|Name|RCSfile|Revision|Source|State'
+_kw_re = re.compile(rb'\$(' + _kws + rb'):[^$\n]*\$')
+_kwo_re = re.compile(rb'\$(' + _kws + rb')(:[^$\n]*)?\$')
 
 
 def expand_keywords(text, cvs_rev):
-  """Return TEXT with keywords expanded for CVS_REV.
+  """Return TEXT (bytes) with keywords expanded for CVS_REV.
 
   E.g., '$Author$' -> '$Author: jrandom $'."""
 
@@ -116,10 +120,10 @@ def expand_keywords(text, cvs_rev):
 
 
 def collapse_keywords(text):
-  """Return TEXT with keywords collapsed.
+  """Return TEXT (bytes) with keywords collapsed.
 
   E.g., '$Author: jrandom $' -> '$Author$'."""
 
-  return _kw_re.sub(r'$\1$', text)
+  return _kw_re.sub(rb'$\1$', text)
 
 

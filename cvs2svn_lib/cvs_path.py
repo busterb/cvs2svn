@@ -167,6 +167,11 @@ class CVSPath(object):
 
     return a is b
 
+  # Defining __eq__ makes Python 3 set __hash__ to None unless we say
+  # otherwise; identity-based equality is exactly what the default,
+  # identity-based hash implements, so restore it explicitly.
+  __hash__ = object.__hash__
+
   def sort_key(self):
     """Return the key that should be used for sorting CVSPath instances.
 
@@ -180,10 +185,10 @@ class CVSPath(object):
         self.get_path_components(rcs=False),
         )
 
-  def __cmp__(a, b):
+  def __lt__(a, b):
     """This method must only be called after ordinal has been set."""
 
-    return cmp(a.ordinal, b.ordinal)
+    return a.ordinal < b.ordinal
 
 
 class CVSDirectory(CVSPath):

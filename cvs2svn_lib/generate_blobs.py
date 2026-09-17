@@ -43,7 +43,7 @@ written to a temporary file created with Python's tempfile module."""
 import sys
 import os
 import tempfile
-import cPickle as pickle
+import pickle
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(sys.argv[0])))
 
@@ -86,12 +86,12 @@ class RevRecord(object):
   def write_blob(self, f, text):
     f.seek(0, 2)
     length = len(text)
-    f.write('blob\n')
-    f.write('mark :%s\n' % (self.mark,))
-    f.write('data %d\n' % (length,))
+    f.write(b'blob\n')
+    f.write(b'mark :%d\n' % (self.mark,))
+    f.write(b'data %d\n' % (length,))
     offset = f.tell()
     f.write(text)
-    f.write('\n')
+    f.write(b'\n')
 
     self.fulltext = (f, offset, length)
 
@@ -252,7 +252,7 @@ def main(args):
   blobfile = open(blobfilename, 'w+b')
   while True:
     try:
-      (rcsfile, marks) = pickle.load(sys.stdin)
+      (rcsfile, marks) = pickle.load(sys.stdin.buffer)
     except EOFError:
       break
     f = open(rcsfile, 'rb')

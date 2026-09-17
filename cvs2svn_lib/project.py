@@ -117,9 +117,8 @@ class Project(object):
   def __eq__(self, other):
     return self.id == other.id
 
-  def __cmp__(self, other):
-    return cmp(self.cvs_module, other.cvs_module) \
-           or cmp(self.id, other.id)
+  def __lt__(self, other):
+    return (self.cvs_module, self.id) < (other.cvs_module, other.id)
 
   def __hash__(self):
     return self.id
@@ -217,7 +216,7 @@ def read_projects(filename):
 
 def write_projects(filename):
   f = open(filename, 'wb')
-  pickle.dump(Ctx()._projects.values(), f, -1)
+  pickle.dump(list(Ctx()._projects.values()), f, -1)
   f.close()
 
 

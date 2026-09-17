@@ -66,8 +66,8 @@ class CVSItem(object):
   def __eq__(self, other):
     return self.id == other.id
 
-  def __cmp__(self, other):
-    return cmp(self.id, other.id)
+  def __lt__(self, other):
+    return self.id < other.id
 
   def __hash__(self):
     return self.id
@@ -333,7 +333,7 @@ class CVSRevision(CVSItem):
     properties = self.cvs_file.properties.copy()
     properties.update(self.properties)
 
-    for (k,v) in properties.items():
+    for (k,v) in list(properties.items()):
       if v is None:
         del properties[k]
 

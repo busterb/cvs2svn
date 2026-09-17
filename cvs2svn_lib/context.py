@@ -93,7 +93,7 @@ class Ctx:
     live past the end of a pass (identified by exactly one leading
     underscore)."""
 
-    for attr in self.__dict__.keys():
+    for attr in list(self.__dict__.keys()):
       if (attr.startswith('_') and not attr.startswith('__')
           and not attr.startswith('_Ctx__')):
         delattr(self, attr)

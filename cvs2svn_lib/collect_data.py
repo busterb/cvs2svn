@@ -434,8 +434,7 @@ class _SymbolDataCollector(object):
     for (i, (name, revision)) in enumerate(symbol_defs):
       known_symbols.setdefault(name, []).append(i)
 
-    known_symbols = known_symbols.items()
-    known_symbols.sort()
+    known_symbols = sorted(known_symbols.items())
     dup_indexes = set()
     for (name, indexes) in known_symbols:
       if len(indexes) > 1:
@@ -733,7 +732,7 @@ class _FileDataCollector(Sink):
     creation order.)"""
 
     for rev_data in self._rev_data.values():
-      rev_data.branches_data.sort(lambda a, b: - cmp(a.id, b.id))
+      rev_data.branches_data.sort(key=lambda a: -a.id)
 
   def _resolve_tag_dependencies(self):
     """Resolve dependencies involving tags."""
@@ -827,7 +826,7 @@ class _FileDataCollector(Sink):
     # "Initial revision\n" with no period.  (This fact helps determine
     # whether this file might have had a default branch in the past.)
     if revision == '1.1':
-      self._file_imported = (log == 'Initial revision\n')
+      self._file_imported = (log == b'Initial revision\n')
 
   def parse_completed(self):
     """Finish the processing of this file.

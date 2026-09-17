@@ -16,7 +16,7 @@
 
 import sys
 import shutil
-import cPickle
+import pickle
 
 from cvs2svn_lib import config
 from cvs2svn_lib.context import Ctx
@@ -312,10 +312,10 @@ class CollateSymbolsPass(Pass):
             )
         )
     self.symbol_info_file.write('      # %s\n' % (stats,))
-    parent_counts = stats.possible_parents.items()
+    parent_counts = list(stats.possible_parents.items())
     if parent_counts:
       self.symbol_info_file.write('      # Possible parents:\n')
-      parent_counts.sort(lambda a,b: cmp((b[1], a[0]), (a[1], b[0])))
+      parent_counts.sort(key=lambda a: (-a[1], a[0]))
       for (pp, count) in parent_counts:
         if isinstance(pp, Trunk):
           self.symbol_info_file.write(
@@ -463,7 +463,7 @@ class FilterSymbolsPass(Pass):
 
     cvs_item_serializer = PrimedPickleSerializer(cvs_item_primer)
     f = open(artifact_manager.get_temp_file(config.ITEM_SERIALIZER), 'wb')
-    cPickle.dump(cvs_item_serializer, f, -1)
+    pickle.dump(cvs_item_serializer, f, -1)
     f.close()
 
     rev_db = NewSortableCVSRevisionDatabase(
@@ -643,13 +643,13 @@ class InitializeChangesetsPass(Pass):
       yield changeset_items
 
   @staticmethod
-  def compare_items(a, b):
+  def item_sort_key(a):
       return (
-          cmp(a.timestamp, b.timestamp)
-          or cmp(a.cvs_file.cvs_path, b.cvs_file.cvs_path)
-          or cmp([int(x) for x in a.rev.split('.')],
-                 [int(x) for x in b.rev.split('.')])
-          or cmp(a.id, b.id))
+          a.timestamp,
+          a.cvs_file.cvs_path,
+          [int(x) for x in a.rev.split('.')],
+          a.id,
+          )
 
   def break_internal_dependencies(self, changeset_items):
     """Split up CHANGESET_ITEMS if necessary to break internal dependencies.
@@ -682,7 +682,7 @@ class InitializeChangesetsPass(Pass):
     if dependencies:
       # Sort the changeset_items in a defined order (chronological to the
       # extent that the timestamps are correct and unique).
-      changeset_items.sort(self.compare_items)
+      changeset_items.sort(key=self.item_sort_key)
       indexes = {}
       for (i, changeset_item) in enumerate(changeset_items):
         indexes[changeset_item.id] = i
@@ -776,7 +776,7 @@ class InitializeChangesetsPass(Pass):
     Ctx()._symbol_db = SymbolDatabase()
 
     f = open(artifact_manager.get_temp_file(config.ITEM_SERIALIZER), 'rb')
-    self.cvs_item_serializer = cPickle.load(f)
+    self.cvs_item_serializer = pickle.load(f)
     f.close()
 
     changeset_db = ChangesetDatabase(
@@ -1223,7 +1223,7 @@ class BreakAllChangesetCyclesPass(Pass):
     ordinal_limits = {}
     for cvs_branch in changeset.iter_cvs_items():
       max_pred_ordinal = 0
-      min_succ_ordinal = sys.maxint
+      min_succ_ordinal = sys.maxsize
 
       for pred_id in cvs_branch.get_pred_ids():
         pred_ordinal = self.ordinals.get(
@@ -1232,14 +1232,14 @@ class BreakAllChangesetCyclesPass(Pass):
 
       for succ_id in cvs_branch.get_succ_ids():
         succ_ordinal = self.ordinals.get(
-            self.cvs_item_to_changeset_id[succ_id], sys.maxint)
+            self.cvs_item_to_changeset_id[succ_id], sys.maxsize)
         min_succ_ordinal = min(min_succ_ordinal, succ_ordinal)
 
       assert max_pred_ordinal < min_succ_ordinal
       ordinal_limits[cvs_branch.id] = (max_pred_ordinal, min_succ_ordinal,)
 
     # Find the earliest successor ordinal:
-    min_min_succ_ordinal = sys.maxint
+    min_min_succ_ordinal = sys.maxsize
     for (max_pred_ordinal, min_succ_ordinal) in ordinal_limits.values():
       min_min_succ_ordinal = min(min_min_succ_ordinal, min_succ_ordinal)
 
@@ -1533,7 +1533,9 @@ class TopologicalSortPass(Pass):
         'w')
 
     for (changeset, timestamp) in self.get_changesets():
-      sorted_changesets.write('%x %08x\n' % (changeset.id, timestamp,))
+      sorted_changesets.write(
+          '%x %08x\n' % (changeset.id, int(timestamp),)
+          )
 
     sorted_changesets.close()
 
@@ -1647,7 +1649,7 @@ class SortSymbolOpeningsClosingsPass(Pass):
     logger.quiet("Sorting symbolic name source revisions...")
 
     def sort_key(line):
-      line = line.split(' ', 2)
+      line = line.split(b' ', 2)
       return (int(line[0], 16), int(line[1]), line[2],)
 
     sort_file(
@@ -1701,7 +1703,7 @@ class IndexSymbolsPass(Pass):
 
     offsets_db = open(
         artifact_manager.get_temp_file(config.SYMBOL_OFFSETS_DB), 'wb')
-    cPickle.dump(offsets, offsets_db, -1)
+    pickle.dump(offsets, offsets_db, -1)
     offsets_db.close()
 
   def run(self, run_options, stats_keeper):
