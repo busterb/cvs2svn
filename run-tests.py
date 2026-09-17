@@ -3655,7 +3655,7 @@ class EOLVariants(Cvs2SvnTestCase):
     expected_text = self.eol_style_strings[self.eol_style].join(
         ['line 1', 'line 2', '\n\n']
         )
-    if not dump_contents.endswith(expected_text):
+    if not dump_contents.endswith(expected_text.encode('ascii')):
       raise Failure()
 
 
