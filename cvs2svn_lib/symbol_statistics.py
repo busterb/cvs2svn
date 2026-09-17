@@ -344,7 +344,7 @@ class SymbolStatisticsCollector:
     Such ghost symbols can arise if a symbol was defined in an RCS
     file but pointed at a non-existent revision."""
 
-    for stats in self._stats.values():
+    for stats in list(self._stats.values()):
       if stats.is_ghost():
         logger.warn('Deleting ghost symbol: %s' % (stats.lod,))
         del self._stats[stats.lod]

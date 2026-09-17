@@ -694,7 +694,7 @@ class _FileDataCollector(Sink):
   def _resolve_branch_dependencies(self):
     """Resolve dependencies involving branches."""
 
-    for branch_data in self.sdc.branches_data.values():
+    for branch_data in list(self.sdc.branches_data.values()):
       # The branch_data's parent has the branch as a child regardless
       # of whether the branch had any subsequent commits:
       try:
@@ -737,7 +737,7 @@ class _FileDataCollector(Sink):
   def _resolve_tag_dependencies(self):
     """Resolve dependencies involving tags."""
 
-    for (rev, tag_data_list) in self.sdc.tags_data.items():
+    for (rev, tag_data_list) in list(self.sdc.tags_data.items()):
       try:
         parent_data = self._rev_data[rev]
       except KeyError:

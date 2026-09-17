@@ -636,7 +636,7 @@ class CVSFileItems(object):
     the same time in the 'Dead' state.  This revision doesn't do
     anything useful, so delete it."""
 
-    for id in self.root_ids:
+    for id in list(self.root_ids):
       cvs_item = self[id]
       if self._is_unneeded_initial_trunk_delete(cvs_item, metadata_db):
         logger.debug('Removing unnecessary delete %s' % (cvs_item,))
