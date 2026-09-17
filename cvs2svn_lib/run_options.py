@@ -838,10 +838,6 @@ class RunOptions(object):
         man_help='Prevent the deletion of temporary files.',
         ))
     prof = 'cProfile'
-    try:
-        import cProfile
-    except ImportError:
-        prof = 'hotshot'
     group.add_option(ManOption(
         '--profile',
         action='callback', callback=self.callback_profile,

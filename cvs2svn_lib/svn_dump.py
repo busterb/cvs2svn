@@ -16,10 +16,7 @@
 
 import subprocess
 
-try:
-  from hashlib import md5
-except ImportError:
-  from md5 import new as md5
+from hashlib import md5
 
 from cvs2svn_lib.common import CommandError
 from cvs2svn_lib.common import FatalError

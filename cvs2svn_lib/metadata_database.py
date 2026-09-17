@@ -14,10 +14,7 @@
 """This module contains classes to manage CVSRevision metadata."""
 
 
-try:
-  from hashlib import sha1
-except ImportError:
-  from sha import new as sha1
+from hashlib import sha1
 
 from cvs2svn_lib.context import Ctx
 from cvs2svn_lib.indexed_database import IndexedDatabase
