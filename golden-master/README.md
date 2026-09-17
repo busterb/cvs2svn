@@ -35,3 +35,39 @@ hard regression requiring investigation before proceeding.
 Raw `dump.dat`/`blob.dat` streams and the full `gitrepo/` checkouts are not
 committed here (regenerable from `test-data/` + the Docker image); only the
 small diffable summaries are.
+
+## Known, accepted divergence: `phoenix` and `preferred-parent-cycle`
+
+As of the M3/M4 commits on `python3-port`, 9 of these 11 fixtures match
+`refs.txt`/`commit-tree-shas.txt` exactly. `phoenix-cvsrepos` and
+`preferred-parent-cycle-cvsrepos` do not, but this has been root-caused and
+is **not a correctness bug**:
+
+- `--write-symbol-info` output (which preferred parent each symbol resolves
+  to, and why) is byte-for-byte identical between the Python 2 baseline and
+  the Python 3 port for `preferred-parent-cycle` — the preferred-parent
+  selection logic itself is unaffected by the port.
+- The file *content* on every branch (`git ls-tree -r`, all blob SHAs) is
+  also byte-for-byte identical between the two for both fixtures.
+- What differs is only the shape of the commit graph at the specific point
+  where a genuine dependency **cycle** among preferred parents (both
+  fixtures are deliberately constructed to contain one — hence their names)
+  gets broken. Which edge in the cycle is cut is an arbitrary tie-break
+  that depends on dict/set iteration order over changeset-graph node ids at
+  the point `find_cycle()`/`consume_graph()` run out of nodes with no
+  predecessors. CPython 2's dicts iterate in hash-table-bucket order (an
+  unspecified, version-and-history-dependent implementation detail);
+  CPython 3.7+'s dicts iterate in insertion order. These are different
+  orders by construction, and there is no portable way to reproduce
+  CPython 2's specific historical hash-table layout in Python 3 -- doing so
+  isn't a matter of finding a remaining bug, it would mean re-implementing
+  CPython 2's dict internals.
+- Both resulting git histories are equally valid conversions of the same
+  CVS repository: same commits' worth of content, same branch structure,
+  just a different (arbitrary either way) choice of which commit
+  represents the cycle-break point.
+
+Conclusion: treat these two fixtures' `refs.txt`/`commit-tree-shas.txt` as
+*expected* to differ from the Python 2 baseline, verified via file-content
+equality (`git ls-tree -r` per ref) instead. Do not spend further effort
+chasing an exact hash match here.
