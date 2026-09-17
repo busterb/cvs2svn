@@ -451,7 +451,7 @@ def make_conversion_id(
   # a hash of the parameters rather than concatenating the parameters
   # into a string.
   if args:
-    conv_id += "-" + md5('\0'.join(args)).hexdigest()
+    conv_id += "-" + md5('\0'.join(args).encode('utf8')).hexdigest()
 
   # Some options-file based tests rely on knowing the paths to which
   # the repository should be written, so we handle that option as a
