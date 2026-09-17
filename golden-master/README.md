@@ -202,6 +202,16 @@ Findings:
   `CVSRevisionReader` Python 3 run too (not just matching tree content) --
   the strongest possible confirmation that the extension is fully
   behavior-preserving, not just "close enough."
-- No existing test (`run-tests.py` or `test-data` fixtures) exercises
-  `ExternalBlobGenerator` at all -- this path was validated only via the
-  real-repo oracle comparison above. Worth adding dedicated coverage.
+- No existing test exercised the 'expanded' keyword-handling mode via
+  `ExternalBlobGenerator` (`main_git2`/`main_git2_merged` already ran
+  `ExternalBlobGenerator`, but only with the DVCS default 'collapsed', a
+  no-op for that code path either way) -- this combination was validated
+  only via the real-repo oracle comparison above. Added regression
+  coverage: `run-tests.py`'s `external_blob_generator_keywords` test
+  (using new `cvs2git-cvs.options`/`cvs2git-external.options` fixtures
+  under `test-data/internal-co-keywords-cvsrepos/`) converts the same
+  fixture via both `CVSRevisionReader` and `ExternalBlobGenerator` with
+  keyword expansion forced on, and asserts byte-identical blob content
+  for every RCS keyword, including across a branch. Verified the test
+  actually catches regressions (temporarily corrupted the timestamp
+  shipped to `generate_blobs.py` and confirmed the test fails).
