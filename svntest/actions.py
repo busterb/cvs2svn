@@ -161,7 +161,7 @@ def guarantee_greek_repository(path, minor_version):
     sys.exit(1)
 
   # make the repos world-writeable, for mod_dav_svn's sake.
-  main.chmod_tree(path, 0666, 0666)
+  main.chmod_tree(path, 0o666, 0o666)
 
 
 def run_and_verify_atomic_ra_revprop_change(message,
@@ -597,7 +597,7 @@ class LogParser:
       for i in data:
         self.parser.Parse(i)
       self.parser.Parse('', True)
-    except xml.parsers.expat.ExpatError, e:
+    except xml.parsers.expat.ExpatError as e:
       raise verify.SVNUnexpectedStdout('%s\n%s\n' % (e, ''.join(data),))
     return self.entries
 
@@ -916,9 +916,9 @@ def run_and_parse_info(*args):
       # normal line
       key, value = line.split(':', 1)
 
-      if re.search(' \(\d+ lines?\)$', key):
+      if re.search(r' \(\d+ lines?\)$', key):
         # numbered continuation lines
-        match = re.match('^(.*) \((\d+) lines?\)$', key)
+        match = re.match(r'^(.*) \((\d+) lines?\)$', key)
         key = match.group(1)
         lock_comment_lines = int(match.group(2))
       elif len(value) > 1:
@@ -1783,7 +1783,7 @@ def make_repo_and_wc(sbox, create_wc = True, read_only = False,
     # just make sure the parent folder of our working copy is created
     try:
       os.mkdir(main.general_wc_dir)
-    except OSError, err:
+    except OSError as err:
       if err.errno != errno.EEXIST:
         raise
 

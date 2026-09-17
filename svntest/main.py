@@ -33,10 +33,10 @@ import time
 import threading
 import optparse
 import xml
-import urllib
+import urllib.request
 import logging
 import hashlib
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 try:
   # Python >=3.0
@@ -228,7 +228,7 @@ def wrap_ex(func, output):
   def w(*args, **kwds):
     try:
       return func(*args, **kwds)
-    except Failure, ex:
+    except Failure as ex:
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
@@ -399,7 +399,8 @@ def open_pipe(command, bufsize=-1, stdin=None, stdout=None, stderr=None):
                        stdin=stdin,
                        stdout=stdout,
                        stderr=stderr,
-                       close_fds=not windows)
+                       close_fds=not windows,
+                       universal_newlines=True)
   return p.stdin, p.stdout, p.stderr, (p, command_string)
 
 def wait_on_pipe(waiter, binary_mode, stdin=None):
@@ -768,7 +769,7 @@ def safe_rmtree(dirname, retry=0):
   """Remove the tree at DIRNAME, making it writable first.
      If DIRNAME is a symlink, only remove the symlink, not its target."""
   def rmtree(dirname):
-    chmod_tree(dirname, 0666, 0666)
+    chmod_tree(dirname, 0o666, 0o666)
     shutil.rmtree(dirname)
 
   if os.path.islink(dirname):
@@ -884,7 +885,7 @@ def create_repos(path, minor_version = None):
         new_contents = new_contents[:-1]
 
       # replace it
-      os.chmod(format_file_path, 0666)
+      os.chmod(format_file_path, 0o666)
       file_write(format_file_path, new_contents, 'wb')
 
     # post-commit
@@ -901,7 +902,7 @@ def create_repos(path, minor_version = None):
           % repr([svnadmin_binary, 'pack', abs_path]))
 
   # make the repos world-writeable, for mod_dav_svn's sake.
-  chmod_tree(path, 0666, 0666)
+  chmod_tree(path, 0o666, 0o666)
 
 # For copying a repository
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
@@ -1007,7 +1008,7 @@ def create_python_hook_script(hook_path, hook_script_code,
   else:
     # For all other platforms
     file_write(hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
-    os.chmod(hook_path, 0755)
+    os.chmod(hook_path, 0o755)
 
 def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."
@@ -1090,7 +1091,7 @@ def merge_notify_line(revstart=None, revend=None, same_URL=True,
   merge operation on revisions REVSTART through REVEND.  Omit both
   REVSTART and REVEND for the case where the left and right sides of
   the merge are from different URLs."""
-  from_foreign_phrase = foreign and "\(from foreign repository\) " or ""
+  from_foreign_phrase = foreign and r"\(from foreign repository\) " or ""
   if target:
     target_re = re.escape(target)
   else:
@@ -1405,9 +1406,9 @@ class TestRunner:
         print('Test driver returned a status code.')
         sys.exit(255)
       result = svntest.testcase.RESULT_OK
-    except Skip, ex:
+    except Skip as ex:
       result = svntest.testcase.RESULT_SKIP
-    except Failure, ex:
+    except Failure as ex:
       result = svntest.testcase.RESULT_FAIL
       msg = ''
       # We captured Failure and its subclasses. We don't want to print
@@ -1425,7 +1426,7 @@ class TestRunner:
     except KeyboardInterrupt:
       logger.error('Interrupted')
       sys.exit(0)
-    except SystemExit, ex:
+    except SystemExit as ex:
       logger.error('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
       self._print_name(ex.code and 'FAIL: ' or 'PASS: ')
       raise
@@ -1627,7 +1628,7 @@ def _create_parser():
   parser.set_defaults(
         server_minor_version=SVN_VER_MINOR,
         url=file_scheme_prefix + \
-                        urllib.pathname2url(os.path.abspath(os.getcwd())),
+                        urllib.request.pathname2url(os.path.abspath(os.getcwd())),
         http_library=_default_http_library)
 
   return parser
@@ -1688,10 +1689,10 @@ def get_target_milestones_for_issues(issue_numbers):
 
   try:
     # Parse the xml for ISSUE_NO from the issue tracker into a Document.
-    issue_xml_f = urllib.urlopen(xml_url)
+    issue_xml_f = urllib.request.urlopen(xml_url)
   except:
-    print "WARNING: Unable to contact issue tracker; " \
-          "milestones defaulting to 'unknown'."
+    print("WARNING: Unable to contact issue tracker; "
+          "milestones defaulting to 'unknown'.")
     return issue_dict
 
   try:
@@ -1707,7 +1708,7 @@ def get_target_milestones_for_issues(issue_numbers):
       milestone = milestone_element[0].childNodes[0].nodeValue
       issue_dict[issue_id] = milestone
   except:
-    print "ERROR: Unable to parse target milestones from issue tracker"
+    print("ERROR: Unable to parse target milestones from issue tracker")
     raise
 
   return issue_dict
@@ -1846,7 +1847,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   # Calculate pristine_greek_repos_url from test_area_url.
   pristine_greek_repos_url = options.test_area_url + '/' + \
-                                urllib.pathname2url(pristine_greek_repos_dir)
+                                urllib.request.pathname2url(pristine_greek_repos_dir)
 
   if options.use_jsvn:
     if options.svn_bin is None:
@@ -1909,7 +1910,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
          or options.mode_filter.upper() == test_mode \
          or (options.mode_filter.upper() == 'PASS' and test_mode == ''):
         if not printed_header:
-          print header
+          print(header)
           printed_header = True
         TestRunner(test_list[testnum], testnum).list(milestones_dict)
     # We are simply listing the tests so always exit with success.

@@ -894,7 +894,11 @@ class RunOptions(object):
       return datetime.date.today()
 
   def callback_manpage(self, option, opt_str, value, parser):
-    f = codecs.getwriter('utf_8')(sys.stdout)
+    # sys.stdout is already a text stream in Python 3 (unlike Python 2,
+    # where it was bytes-oriented and needed codecs.getwriter() to
+    # accept str input); wrapping it again would make it expect str
+    # but then try to write the resulting bytes to a str-only stream.
+    f = sys.stdout
     writer = ManWriter(parser,
                        section='1',
                        date=self._choose_build_date(),

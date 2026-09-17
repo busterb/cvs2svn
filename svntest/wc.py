@@ -91,7 +91,7 @@ _re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
                               '([KOBT ])'
                               '([C ]) '
                               '([* ]) +'
-                              '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
+                              r'((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
                               '(?P<path>.+)$')
 
 _re_parse_skipped = re.compile("^Skipped[^']* '(.+)'( --.*)?\n")
@@ -100,15 +100,15 @@ _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
 _re_parse_checkout = re.compile('^([RMAGCUDE_ B][MAGCUDE_ ])'
                                 '([B ])'
-                                '([CAUD ])\s+'
+                                r'([CAUD ])\s+'
                                 '(.+)')
 _re_parse_co_skipped = re.compile('^(Restored|Skipped|Removed external)'
-                                  '\s+\'(.+)\'(( --|: ).*)?')
-_re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
+                                  r'\s+\'(.+)\'(( --|: ).*)?')
+_re_parse_co_restored = re.compile(r'^(Restored)\s+\'(.+)\'')
 
 # Lines typically have a verb followed by whitespace then a path.
-_re_parse_commit_ext = re.compile('^(([A-Za-z]+( [a-z]+)*)) \'(.+)\'( --.*)?')
-_re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
+_re_parse_commit_ext = re.compile(r'^(([A-Za-z]+( [a-z]+)*)) \'(.+)\'( --.*)?')
+_re_parse_commit = re.compile(r'^(\w+(  \(bin\))?)\s+(.+)')
 
 
 class State:
@@ -183,7 +183,7 @@ class State:
       for path in args:
         try:
           path_ref = self.desc[to_relpath(path)]
-        except KeyError, e:
+        except KeyError as e:
           e.args = ["Path '%s' not present in WC state descriptor" % path]
           raise
         path_ref.tweak(**kw)
@@ -231,7 +231,10 @@ class State:
           os.makedirs(dirpath)
 
         # write out the file contents now
-        open(fullpath, 'wb').write(item.contents)
+        contents = item.contents
+        if not isinstance(contents, bytes):
+          contents = contents.encode('utf8')
+        open(fullpath, 'wb').write(contents)
 
   def normalize(self):
     """Return a "normalized" version of self.
@@ -498,7 +501,8 @@ class State:
 
     desc = { }
     for line in lines:
-      if line.startswith('DBG:') or line.startswith('Transmitting'):
+      if (line.startswith('DBG:') or line.startswith('Transmitting')
+          or line.startswith('Committing transaction')):
         continue
 
       match = _re_parse_commit_ext.search(line)

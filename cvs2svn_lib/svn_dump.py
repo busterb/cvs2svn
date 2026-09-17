@@ -36,11 +36,27 @@ OP_ADD    = 'add'
 OP_CHANGE = 'change'
 
 
+def _utf8_len(s):
+  """Return the UTF-8 byte length of str S.
+
+  Dumpfile '...-length:' headers must be exact byte counts; S here is
+  always ASCII-safe formatted text except for embedded property
+  values, which may contain arbitrary UTF-8."""
+
+  return len(s.encode('utf8'))
+
+
 def utf8_path(path):
-  """Return a copy of PATH encoded in UTF-8."""
+  """Return PATH as a properly-decoded str.
+
+  (Despite the name, this returns str rather than UTF-8 bytes: the
+  DumpstreamDelegate write() call sites embed this via %s into str
+  templates that get UTF-8-encoded once, as a whole, at the final
+  _EncodingWriter.write() boundary -- pre-encoding here would mix
+  bytes into those str templates instead.)"""
 
   try:
-    return Ctx().cvs_filename_decoder.decode_path(path).encode('utf8')
+    return Ctx().cvs_filename_decoder.decode_path(path)
   except UnicodeError:
     raise FatalError(
         "Unable to convert a path '%s' to internal encoding.\n"
@@ -50,15 +66,16 @@ def utf8_path(path):
 
 
 def generate_ignores(cvsignore, raw_ignore_val):
+  # raw_ignore_val is the raw (bytes) content of a .cvsignore file.
   ignore_vals = [ ]
   for ignore in raw_ignore_val.split():
     # Reset the list if we encounter a '!'
     # See http://cvsbook.red-bean.com/cvsbook.html#cvsignore
-    if ignore == '!':
+    if ignore == b'!':
       ignore_vals = [ ]
     else:
       try:
-        ignore = Ctx().cvs_filename_decoder.decode_path(ignore).encode('utf8')
+        ignore = Ctx().cvs_filename_decoder.decode_path(ignore)
       except UnicodeError:
         raise FatalError(
             "Unable to convert path '%s' (found in file %s) to internal encoding.\n"
@@ -67,6 +84,29 @@ def generate_ignores(cvsignore, raw_ignore_val):
             % (ignore, cvsignore,))
       ignore_vals.append(ignore)
   return ignore_vals
+
+
+class _EncodingWriter(object):
+  """Wrap a binary-mode file object for the SVN dumpfile stream.
+
+  The stream mixes UTF-8 text (headers, property blocks) with raw
+  binary file content in the same byte stream, so str writes are
+  encoded to UTF-8 here and bytes writes (paths already UTF-8-encoded
+  by utf8_path(), and file content) pass through unchanged, keeping
+  every write() call site in this module agnostic to that
+  distinction."""
+
+  def __init__(self, f):
+    self._f = f
+
+  def write(self, s):
+    if isinstance(s, bytes):
+      self._f.write(s)
+    else:
+      self._f.write(s.encode('utf8'))
+
+  def close(self):
+    self._f.close()
 
 
 class DumpstreamDelegate(SVNRepositoryDelegate):
@@ -80,7 +120,7 @@ class DumpstreamDelegate(SVNRepositoryDelegate):
     the object are write() and close()."""
 
     self._revision_reader = revision_reader
-    self._dumpfile = dumpfile
+    self._dumpfile = _EncodingWriter(dumpfile)
     self._write_dumpfile_header()
 
     # A set of the basic project infrastructure project directories
@@ -101,7 +141,15 @@ class DumpstreamDelegate(SVNRepositoryDelegate):
 
   @staticmethod
   def _string_for_props(properties):
-    """Return PROPERTIES in the form needed for the dumpfile."""
+    """Return PROPERTIES in the form needed for the dumpfile.
+
+    The returned value is str; it is UTF-8-encoded once, as a whole,
+    by _EncodingWriter when it's eventually written out.  Property
+    values may arrive as either UTF-8 bytes (e.g. author/log_msg --
+    see CleanMetadataPass._get_clean_author()) or str; either way, the
+    'V <count>' header below must be the exact UTF-8 *byte* count,
+    which is why it's computed from an explicit .encode() rather than
+    len(v)."""
 
     prop_strings = []
     for (k, v) in sorted(properties.items()):
@@ -112,7 +160,12 @@ class DumpstreamDelegate(SVNRepositoryDelegate):
         # None indicates that the property should be left unset.
         pass
       else:
-        prop_strings.append('K %d\n%s\nV %d\n%s\n' % (len(k), k, len(v), v))
+        if isinstance(v, bytes):
+          v_len = len(v)
+          v = v.decode('utf8')
+        else:
+          v_len = len(v.encode('utf8'))
+        prop_strings.append('K %d\n%s\nV %d\n%s\n' % (len(k), k, v_len, v))
 
     prop_strings.append('PROPS-END\n')
 
@@ -256,7 +309,7 @@ class DumpstreamDelegate(SVNRepositoryDelegate):
     svn_props = cvs_rev.get_properties()
     if cvs_rev.properties_changed:
       prop_contents = self._string_for_props(svn_props)
-      props_header = 'Prop-content-length: %d\n' % len(prop_contents)
+      props_header = 'Prop-content-length: %d\n' % _utf8_len(prop_contents)
     else:
       prop_contents = ''
       props_header = ''
@@ -271,7 +324,7 @@ class DumpstreamDelegate(SVNRepositoryDelegate):
             (s + '\n') for s in generate_ignores(cvs_rev.get_svn_path(), data)
             )
           })
-      ignore_len = len(ignore_contents)
+      ignore_len = _utf8_len(ignore_contents)
 
       # write headers, then props
       self._dumpfile.write(
@@ -303,7 +356,8 @@ class DumpstreamDelegate(SVNRepositoryDelegate):
         'Content-length: %d\n'
         '\n' % (
             utf8_path(cvs_rev.get_svn_path()), op, props_header,
-            len(data), checksum.hexdigest(), len(data) + len(prop_contents),
+            len(data), checksum.hexdigest(),
+            len(data) + _utf8_len(prop_contents),
             )
         )
 

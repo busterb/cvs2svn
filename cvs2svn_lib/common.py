@@ -359,11 +359,13 @@ class CVSTextDecoder:
     """Try to decode PATH using our configured source encodings.
 
     Decode each path component separately (as they may each use
-    different encodings)."""
+    different encodings).  PATH may be str or bytes (e.g., a single
+    whitespace-separated chunk from raw .cvsignore file content)."""
 
+    sep = '/' if isinstance(path, str) else b'/'
     return u'/'.join([
         self.decode(piece)
-        for piece in path.split('/')
+        for piece in path.split(sep)
         ])
 
 

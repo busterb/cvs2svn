@@ -544,7 +544,7 @@ class DumpParser:
       if self.current >= len(self.lines):
         break
       path = self.parse_path()
-      if not path and not path is '':
+      if not path and not path == '':
         break
       if not nodes.get(path):
         nodes[path] = {}

@@ -53,9 +53,9 @@ except ImportError:
 from difflib import Differ
 
 # Make sure that a supported version of Python is being used:
-if not (0x02040000 <= sys.hexversion < 0x03000000):
+if sys.hexversion < 0x03090000:
   sys.stderr.write(
-      'error: Python 2, version 2.4 or higher required.\n'
+      'error: Python 3, version 3.9 or higher required.\n'
       )
   sys.exit(1)
 
@@ -333,10 +333,10 @@ def parse_log(svn_repos, symbols):
     for i in range(num_lines):
       log.msg += out.readline()
 
-  log_start_re = re.compile('^r(?P<rev>[0-9]+) \| '
-                            '(?P<author>[^\|]+) \| '
-                            '(?P<date>[^\|]+) '
-                            '\| (?P<lines>[0-9]+) (line|lines)$')
+  log_start_re = re.compile(r'^r(?P<rev>[0-9]+) \| '
+                            r'(?P<author>[^\|]+) \| '
+                            r'(?P<date>[^\|]+) '
+                            r'\| (?P<lines>[0-9]+) (line|lines)$')
 
   log_separator = '-' * 72
 
@@ -365,8 +365,8 @@ def parse_log(svn_repos, symbols):
         elif line.startswith('Changed paths:'):
           this_log.absorb_changed_paths(out)
         else:
-          print 'unexpected log output'
-          print "Line: '%s'" % line
+          print('unexpected log output')
+          print("Line: '%s'" % line)
           sys.exit(1)
 
         absorb_message_body(out, int(m.group('lines')), this_log)
@@ -374,12 +374,12 @@ def parse_log(svn_repos, symbols):
       elif len(line) == 0:
         break   # We've reached the end of the log output.
       else:
-        print 'unexpected log output (missing revision line)'
-        print "Line: '%s'" % line
+        print('unexpected log output (missing revision line)')
+        print("Line: '%s'" % line)
         sys.exit(1)
     else:
-      print 'unexpected log output (missing log separator)'
-      print "Line: '%s'" % line
+      print('unexpected log output (missing log separator)')
+      print("Line: '%s'" % line)
       sys.exit(1)
 
   return logs
@@ -813,9 +813,9 @@ class Cvs2SvnTestFunction(TestCase):
     # docstring on it.
     assert isinstance(func, types.FunctionType)
 
-    name = func.func_name
+    name = func.__name__
 
-    assert func.func_code.co_argcount == 0, \
+    assert func.__code__.co_argcount == 0, \
         '%s must not take any arguments' % name
 
     doc = func.__doc__.strip()
@@ -836,7 +836,7 @@ class Cvs2SvnTestFunction(TestCase):
     self.func = func
 
   def get_function_name(self):
-    return self.func.func_name
+    return self.func.__name__
 
   def get_sandbox_name(self):
     return None
@@ -938,8 +938,8 @@ def show_usage():
   out = run_script(cvs2svn, None)
   if (len(out) > 2 and out[0].find('ERROR:') == 0
       and out[1].find('DBM module')):
-    print 'cvs2svn cannot execute due to lack of proper DBM module.'
-    print 'Exiting without running any further tests.'
+    print('cvs2svn cannot execute due to lack of proper DBM module.')
+    print('Exiting without running any further tests.')
     sys.exit(1)
   if out[0].find('Usage:') < 0:
     raise Failure('Basic cvs2svn invocation failed.')
