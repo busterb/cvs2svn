@@ -57,6 +57,16 @@ class Ctx:
     self.revision_property_setters = []
     self.tmpdir = None
     self.skip_cleanup = False
+    # Whether the SQLite-backed intermediate databases (database.py,
+    # indexed_database.py, record_table.py) may live purely in memory
+    # instead of on disk. Only safe when this invocation runs every
+    # pass from start to finish: SQLite's shared-cache in-memory mode
+    # keeps data alive across a database's own close()/reopen() calls
+    # within this process (see sqlite_connect.py), but never persists
+    # across separate process invocations, which --passes/-p partial
+    # runs and --skip-cleanup (for inspecting intermediate files)
+    # both depend on. Set once, early, by run_options.py.
+    self.use_in_memory_databases = False
     self.keep_cvsignore = False
     self.cross_project_commits = True
     self.cross_branch_commits = True

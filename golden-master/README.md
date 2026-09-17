@@ -215,3 +215,101 @@ Findings:
   for every RCS keyword, including across a branch. Verified the test
   actually catches regressions (temporarily corrupted the timestamp
   shipped to `generate_blobs.py` and confirmed the test fails).
+
+## M7 continued: pickle, batching, and in-memory SQLite
+
+Profiling on the larger LibreSSL/OpenBSD subset (18,660 files, 96,500
+revisions, 17,889 commits) after the `ExternalBlobGenerator` fix found
+three more fixes, each independently benchmarked and validated against the
+Python 2 oracle exactly as above (byte-identical file content across all
+276 refs, matching commit counts, every time):
+
+| Change | LibreSSL wall clock | Speedup |
+|---|---|---|
+| (baseline, `ExternalBlobGenerator`) | 163.4s | -- |
+| Drop `PrimedPickleSerializer` for plain C-accelerated pickle | 99.1s | 1.65x |
+| Batch `create_graph_node()`'s changeset-id lookups | 67.0s | 1.48x |
+| SQLite databases in memory instead of on disk | 52.7s | 1.27x |
+| **Combined** | **52.7s** | **9.2x vs. Python 2's 614.5s** |
+
+- **Pickle**: `PrimedPickleSerializer` "primed" a pickler/unpickler's memo
+  with a handful of long-lived classes (CVSItem subclasses, etc.) so only a
+  short backreference needed to be written instead of a full class
+  reference each time -- but doing so required the pure-Python
+  `pickle._Pickler`/`_Unpickler` (the C-accelerated Pickler's memo can't be
+  externally repopulated). Profiling showed this pure-Python fallback
+  dominating runtime (`pickle.py:save()` called 41.7 million times). A
+  microbenchmark shaped like the actual hot path showed plain
+  C-accelerated pickle, no priming at all, is ~5.6x faster to dump and
+  ~6.5x faster to load despite the primed format's smaller per-item size.
+  Replaced with `PickleSerializer` (plain `pickle.dump`/`load`) across all
+  6 call sites; removed the now-dead `PrimedPickleSerializer`.
+- **Batching**: with pickle fixed, `sqlite3.Connection.execute()` became
+  the new #1 cost (6.6M calls, ~27% of runtime). Traced to
+  `RevisionChangeset`/`OrderedChangeset`/`SymbolChangeset.create_graph_node()`
+  looking up each CVS item's predecessor/successor id in
+  `cvs_item_to_changeset_id` (a `RecordTable`) one id at a time via
+  `.get()`, despite `RecordTable.get_many()` already existing and being
+  used elsewhere for exactly this kind of batching. Restructured all three
+  `create_graph_node()` methods to collect every id first, then resolve
+  them with one `get_many()` call per changeset.
+- **Tried and reverted**: parallelizing `CollectRevsPass` (RCS parsing,
+  now the largest single pass, ~26% of runtime) across a worker pool.
+  Delivered only a 1.07x speedup with peak memory nearly tripling --
+  shipping each file's full parsed content back from a worker through
+  pickle/IPC costs nearly as much as the parsing it was meant to
+  parallelize. Not reattempted with this design; see the project's memory
+  notes for why.
+- **In-memory SQLite**: with pickle and batching fixed, SQLite's own
+  footprint was still ~16.5% of runtime (13.6s raw `execute()` + ~8.1s
+  Python-side wrapper overhead). A microbenchmark isolating reads vs.
+  writes at comparable volume to the real workload found tuning
+  `synchronous`/`journal_mode` pragmas barely helped (reads never touch
+  durability settings, and writes are already batched every 10,000 rows),
+  but a pure `:memory:`-backed database was **4.3x faster on reads** --
+  not because of disk I/O (these small files are already OS-page-cached)
+  but because SQLite's file-backed B-tree/page-cache machinery is
+  inherently heavier than its in-memory backend. Since reads dominate the
+  actual call volume, this was worth pursuing.
+
+  The catch: cvs2svn's passes each close and later reopen "the same"
+  database (by filename) to hand data to one another, and some passes
+  (`BreakRevisionChangesetCyclesPass`, `BreakSymbolChangesetCyclesPass`,
+  `BreakAllChangesetCyclesPass`) additionally make an independent copy of
+  a database via `shutil.copyfile()` before mutating it -- both patterns
+  assume a real file on disk, which a naive `sqlite3.connect(':memory:')`
+  swap can't support (every connection to `:memory:` is a private, empty
+  database). Also, `--passes`/`-p` explicitly resumes a conversion across
+  *separate process invocations* by reopening these same on-disk files --
+  going fully in-memory would silently break that documented feature.
+
+  Solved with `cvs2svn_lib/sqlite_connect.py`: SQLite's shared-cache named
+  in-memory mode (`file:NAME?mode=memory&cache=shared`) lets any number of
+  connections naming the same NAME see the same data, for as long as one
+  "keepalive" connection to that NAME stays open somewhere in the process
+  -- the module keeps exactly one such keepalive per NAME for the
+  process's lifetime, so passes' ordinary open/close cycles don't destroy
+  the data in between. `copy_database()` uses SQLite's own `backup()` API
+  (which works identically for memory or disk connections) in place of
+  `shutil.copyfile()`. `Ctx().use_in_memory_databases` is computed once,
+  early, in `run_options.py`: true only when this invocation runs every
+  pass from first to last *and* `--skip-cleanup` (which leaves
+  intermediate files behind for inspection) wasn't requested -- any
+  partial `--passes` range, in either direction, keeps the existing
+  on-disk behavior automatically. `TempFile.cleanup()` (artifact.py) was
+  made defensive (skips `os.unlink()` if the file was never created)
+  since in-memory-mode artifacts never touch disk at all.
+
+  Verified all three code paths directly, not just via run-tests.py
+  (which mostly exercises the in-memory path by default, since it always
+  runs full conversions): a full single-invocation run; a `--passes=1:8`
+  run followed by a separate-process `--passes=9:` resumption, diffed
+  byte-for-byte identical against a full-run dumpfile; and
+  `--skip-cleanup`, confirmed to leave real files on disk.
+
+  Open question, not yet investigated: whether the three
+  `CVS_ITEM_TO_CHANGESET_*` copies are actually load-bearing (e.g. so an
+  earlier stage's table stays available for `--passes`/-p resumption while
+  a later stage mutates its own copy) or a leftover from an earlier
+  iteration of the code that could be eliminated instead of ported to
+  `copy_database()`.

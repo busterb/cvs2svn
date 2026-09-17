@@ -15,10 +15,11 @@
 
 
 import os
-import sqlite3
 import pickle
 
 from cvs2svn_lib.common import DB_OPEN_NEW
+from cvs2svn_lib.context import Ctx
+from cvs2svn_lib import sqlite_connect
 
 
 class Database:
@@ -49,11 +50,12 @@ class Database:
     self.filename = filename
     self.mode = mode
     self._pending_writes = 0
+    self._in_memory = Ctx().use_in_memory_databases
 
     if mode == DB_OPEN_NEW:
-      if os.path.exists(filename):
+      if not self._in_memory and os.path.exists(filename):
         os.unlink(filename)
-      self.db = sqlite3.connect(filename)
+      self.db = sqlite_connect.connect(filename, self._in_memory)
       self.db.execute(
           'CREATE TABLE kv (key BLOB PRIMARY KEY, value BLOB)'
           )
@@ -64,7 +66,7 @@ class Database:
           )
       self.db.commit()
     else:
-      self.db = sqlite3.connect(filename)
+      self.db = sqlite_connect.connect(filename, self._in_memory)
       row = self.db.execute(
           'SELECT value FROM kv WHERE key = ?', (self.serializer_key,)
           ).fetchone()

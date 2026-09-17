@@ -15,10 +15,10 @@
 
 
 import sys
-import shutil
 import pickle
 
 from cvs2svn_lib import config
+from cvs2svn_lib import sqlite_connect
 from cvs2svn_lib.context import Ctx
 from cvs2svn_lib.common import warning_prefix
 from cvs2svn_lib.common import FatalException
@@ -912,11 +912,13 @@ class BreakRevisionChangesetCyclesPass(Pass):
         artifact_manager.get_temp_file(config.CVS_ITEMS_SORTED_INDEX_TABLE),
         DB_OPEN_READ)
 
-    shutil.copyfile(
+    sqlite_connect.copy_database(
         artifact_manager.get_temp_file(
             config.CVS_ITEM_TO_CHANGESET),
         artifact_manager.get_temp_file(
-            config.CVS_ITEM_TO_CHANGESET_REVBROKEN))
+            config.CVS_ITEM_TO_CHANGESET_REVBROKEN),
+        Ctx().use_in_memory_databases,
+        )
     cvs_item_to_changeset_id = CVSItemToChangesetTable(
         artifact_manager.get_temp_file(
             config.CVS_ITEM_TO_CHANGESET_REVBROKEN),
@@ -1134,11 +1136,13 @@ class BreakSymbolChangesetCyclesPass(Pass):
         artifact_manager.get_temp_file(config.CVS_ITEMS_SORTED_INDEX_TABLE),
         DB_OPEN_READ)
 
-    shutil.copyfile(
+    sqlite_connect.copy_database(
         artifact_manager.get_temp_file(
             config.CVS_ITEM_TO_CHANGESET_REVBROKEN),
         artifact_manager.get_temp_file(
-            config.CVS_ITEM_TO_CHANGESET_SYMBROKEN))
+            config.CVS_ITEM_TO_CHANGESET_SYMBROKEN),
+        Ctx().use_in_memory_databases,
+        )
     cvs_item_to_changeset_id = CVSItemToChangesetTable(
         artifact_manager.get_temp_file(
             config.CVS_ITEM_TO_CHANGESET_SYMBROKEN),
@@ -1354,11 +1358,13 @@ class BreakAllChangesetCyclesPass(Pass):
         artifact_manager.get_temp_file(config.CVS_ITEMS_SORTED_INDEX_TABLE),
         DB_OPEN_READ)
 
-    shutil.copyfile(
+    sqlite_connect.copy_database(
         artifact_manager.get_temp_file(
             config.CVS_ITEM_TO_CHANGESET_SYMBROKEN),
         artifact_manager.get_temp_file(
-            config.CVS_ITEM_TO_CHANGESET_ALLBROKEN))
+            config.CVS_ITEM_TO_CHANGESET_ALLBROKEN),
+        Ctx().use_in_memory_databases,
+        )
     self.cvs_item_to_changeset_id = CVSItemToChangesetTable(
         artifact_manager.get_temp_file(
             config.CVS_ITEM_TO_CHANGESET_ALLBROKEN),

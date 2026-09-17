@@ -26,11 +26,12 @@ SQLite rather than via the packer's empty_value sentinel."""
 
 
 import os
-import sqlite3
 
 from cvs2svn_lib.common import DB_OPEN_READ
 from cvs2svn_lib.common import DB_OPEN_WRITE
 from cvs2svn_lib.common import DB_OPEN_NEW
+from cvs2svn_lib.context import Ctx
+from cvs2svn_lib import sqlite_connect
 
 
 class Packer(object):
@@ -96,17 +97,18 @@ class RecordTable(object):
     self.mode = mode
     self.packer = packer
     self._pending_writes = 0
+    self._in_memory = Ctx().use_in_memory_databases
 
     if self.mode == DB_OPEN_NEW:
-      if os.path.exists(filename):
+      if not self._in_memory and os.path.exists(filename):
         os.unlink(filename)
-      self.db = sqlite3.connect(filename)
+      self.db = sqlite_connect.connect(filename, self._in_memory)
       self.db.execute(
           'CREATE TABLE records (id INTEGER PRIMARY KEY, value INTEGER)'
           )
       self.db.commit()
     elif self.mode in (DB_OPEN_WRITE, DB_OPEN_READ):
-      self.db = sqlite3.connect(filename)
+      self.db = sqlite_connect.connect(filename, self._in_memory)
     else:
       raise RuntimeError('Invalid mode %r' % self.mode)
 

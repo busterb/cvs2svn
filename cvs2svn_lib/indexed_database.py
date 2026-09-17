@@ -15,12 +15,13 @@
 
 
 import os
-import sqlite3
 import pickle
 
 from cvs2svn_lib.common import DB_OPEN_READ
 from cvs2svn_lib.common import DB_OPEN_WRITE
 from cvs2svn_lib.common import DB_OPEN_NEW
+from cvs2svn_lib.context import Ctx
+from cvs2svn_lib import sqlite_connect
 
 
 class IndexedDatabase:
@@ -48,6 +49,7 @@ class IndexedDatabase:
     self.index_filename = index_filename
     self.mode = mode
     self._pending_writes = 0
+    self._in_memory = Ctx().use_in_memory_databases
 
     # index_filename is a vestige of the pre-SQLite two-file layout;
     # keep an (empty) marker file there so that artifact-manager's
@@ -56,9 +58,9 @@ class IndexedDatabase:
       open(index_filename, 'wb').close()
 
     if self.mode == DB_OPEN_NEW:
-      if os.path.exists(self.filename):
+      if not self._in_memory and os.path.exists(self.filename):
         os.unlink(self.filename)
-      self.db = sqlite3.connect(self.filename)
+      self.db = sqlite_connect.connect(self.filename, self._in_memory)
       self.db.execute(
           'CREATE TABLE items (id INTEGER PRIMARY KEY, data BLOB)'
           )
@@ -73,7 +75,7 @@ class IndexedDatabase:
           )
       self.db.commit()
     elif self.mode in (DB_OPEN_WRITE, DB_OPEN_READ):
-      self.db = sqlite3.connect(self.filename)
+      self.db = sqlite_connect.connect(self.filename, self._in_memory)
       row = self.db.execute(
           'SELECT value FROM meta WHERE key = ?', ('serializer',)
           ).fetchone()

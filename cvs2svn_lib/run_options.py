@@ -1088,6 +1088,16 @@ class RunOptions(object):
       raise InvalidPassError(
           'Ending pass must not come before starting pass.')
 
+    # Only safe to keep the intermediate SQLite databases purely in
+    # memory if this invocation runs every pass start to finish, and
+    # isn't being asked to leave intermediate files behind for
+    # inspection (see Ctx().use_in_memory_databases's docstring):
+    ctx.use_in_memory_databases = (
+        not ctx.skip_cleanup
+        and self.start_pass == 1
+        and self.end_pass == self.pass_manager.num_passes
+        )
+
     if not ctx.dry_run and ctx.output_option is None:
       raise FatalError('No output option specified.')
 

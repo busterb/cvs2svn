@@ -47,8 +47,11 @@ class TempFile(Artifact):
   filename = property(_get_filename)
 
   def cleanup(self):
-    logger.verbose("Deleting", self.filename)
-    os.unlink(self.filename)
+    # Nothing to delete if this artifact was an in-memory database
+    # (see Ctx().use_in_memory_databases) that never touched disk:
+    if os.path.exists(self.filename):
+      logger.verbose("Deleting", self.filename)
+      os.unlink(self.filename)
 
   def __str__(self):
     return 'Temporary file %r' % (self.filename,)
