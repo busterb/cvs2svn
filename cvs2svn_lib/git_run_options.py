@@ -127,18 +127,16 @@ A directory under \\fI%s\\fR (or the directory specified by
         action='store_true',
         help=(
             'Use an external Python program to extract file revision '
-            'contents (much faster than --use-rcs or --use-cvs but '
-            'leaves keywords unexpanded and requires a separate, '
-            'seekable blob file to write to in parallel to the main '
-            'cvs2git script.'
+            'contents (much faster than --use-rcs or --use-cvs); '
+            'requires a separate, seekable blob file to write to in '
+            'parallel to the main cvs2git script.'
             ),
         man_help=(
             'Use an external Python program to extract the file revision '
             'contents from the RCS files and output them to the blobfile.  '
             'This option is much faster than \\fB--use-rcs\\fR or '
-            '\\fB--use-cvs\\fR but leaves keywords unexpanded and requires '
-            'a separate, seekable blob file to write to in parallel to the '
-            'main cvs2git script.'
+            '\\fB--use-cvs\\fR; requires a separate, seekable blob file to '
+            'write to in parallel to the main cvs2git script.'
             ),
         ))
 

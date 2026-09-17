@@ -46,6 +46,7 @@ import locale
 import textwrap
 import calendar
 import types
+import subprocess
 try:
   from hashlib import md5
 except ImportError:
@@ -4079,6 +4080,90 @@ def vendor_1_1_not_root():
       )
 
 
+@Cvs2SvnTestFunction
+def external_blob_generator_keywords():
+  "external blob generator matches keyword expansion"
+
+  # ExternalBlobGenerator reconstructs revision fulltext directly from
+  # RCS deltas, with no cvs/co subprocess at all. Before it could be
+  # used for a real conversion, it had to be taught to replicate
+  # AbstractRCSRevisionReader.get_content()'s keyword-expansion/EOL-fix
+  # logic itself (see keyword_expander.py's _KeywordExpander refactor).
+  # That combination -- KeywordHandlingPropertySetter('expanded') via
+  # ExternalBlobGenerator -- had no test coverage at all: the existing
+  # main_git2/main_git2_merged tests exercise ExternalBlobGenerator
+  # only with the DVCS default ('collapsed'), a no-op for this code
+  # path either way.
+  #
+  # Verify ExternalBlobGenerator produces byte-identical blob content
+  # to CVSRevisionReader, for every $Author$/$Date$/$RCSfile$/
+  # $Source$/$State$/$Revision$/$Id$/$Header$ keyword (dir/kv.txt) and
+  # across a branch (dir/kv-deleted.txt on branch 'b', which also
+  # exercises RCSStream.apply_diff() and the $Source$ keyword's
+  # "/Attic" expansion for a deleted-on-trunk file).
+
+  cvsrepos = os.path.join(test_data_dir, 'internal-co-keywords-cvsrepos')
+
+  def convert(options_file):
+    run_script(
+        cvs2git, None,
+        '--options=%s' % (os.path.join(cvsrepos, options_file),),
+        '-qqqqqq',
+        )
+    with open(os.path.join('cvs2git-tmp', 'git-blob.dat'), 'rb') as f:
+      blob_data = f.read()
+    with open(os.path.join('cvs2git-tmp', 'git-dump.dat'), 'rb') as f:
+      dump_data = f.read()
+    return blob_data + dump_data
+
+  def build_repo(stream_data, gitrepo):
+    safe_rmtree(gitrepo)
+    os.mkdir(gitrepo)
+    subprocess.run(
+        ['git', 'init', '--quiet', '--bare', gitrepo], check=True,
+        )
+    subprocess.run(
+        ['git', 'fast-import', '--quiet'], cwd=gitrepo, input=stream_data,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
+        )
+
+  def read_blob(gitrepo, ref, path):
+    return subprocess.run(
+        ['git', 'show', '%s:%s' % (ref, path)], cwd=gitrepo,
+        check=True, stdout=subprocess.PIPE,
+        ).stdout
+
+  if not os.path.isdir(tmp_dir):
+    os.mkdir(tmp_dir)
+
+  cvs_repo = os.path.join(tmp_dir, 'kwtest-cvs.git')
+  build_repo(convert('cvs2git-cvs.options'), cvs_repo)
+
+  ext_repo = os.path.join(tmp_dir, 'kwtest-ext.git')
+  build_repo(convert('cvs2git-external.options'), ext_repo)
+
+  for (ref, path) in [
+      ('refs/heads/master', 'dir/kv.txt'),
+      ('refs/heads/master', 'dir/kk.txt'),
+      ('refs/heads/master', 'dir/ko.txt'),
+      ('refs/heads/b', 'dir/kv-deleted.txt'),
+      ]:
+    cvs_content = read_blob(cvs_repo, ref, path)
+    ext_content = read_blob(ext_repo, ref, path)
+    if cvs_content != ext_content:
+      raise Failure(
+          '%s:%s differs between CVSRevisionReader and '
+          'ExternalBlobGenerator:\n%r\nvs\n%r'
+          % (ref, path, cvs_content, ext_content)
+          )
+
+  # Make sure this actually exercised keyword expansion, not a
+  # vacuous pass where both sides happened to leave keywords alone:
+  kv_content = read_blob(cvs_repo, 'refs/heads/master', 'dir/kv.txt')
+  if b'$Id:' not in kv_content:
+    raise Failure('dir/kv.txt does not contain an expanded $Id$ keyword')
+
+
 ########################################################################
 # Run the tests
 
@@ -4298,6 +4383,7 @@ test_list = [
     missing_vendor_branch,
     newphrases,
     vendor_1_1_not_root,
+    external_blob_generator_keywords,
     ]
 
 if __name__ == '__main__':

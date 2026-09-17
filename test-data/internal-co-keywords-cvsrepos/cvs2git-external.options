@@ -1,0 +1,33 @@
+# (Be in -*- mode: python; coding: utf-8 -*- mode.)
+
+# Options file for the external_blob_generator_keywords regression
+# test: convert this fixture to git using ExternalBlobGenerator (the
+# in-process, no-subprocess-per-revision path) with keyword expansion
+# turned on, so its output can be diffed against cvs2git-cvs.options's
+# output (same fixture, same keyword handling, but via
+# CVSRevisionReader).
+#
+# Load the fully-functional example file for boilerplate, then
+# override just the project path, keyword handling, and revision
+# collector.
+
+execfile('cvs2git-example.options')
+
+run_options.set_project(
+    r'test-data/internal-co-keywords-cvsrepos',
+    symbol_strategy_rules=global_symbol_strategy_rules,
+    )
+
+# Override the example's file property setters (which default keyword
+# handling to 'collapsed') so that every file uses 'expanded' -- the
+# mode that actually exercises _KeywordExpander, and the one that is
+# load-bearing for real CVS repositories with $Id$/$OpenBSD$-style
+# markers.
+ctx.file_property_setters = [KeywordHandlingPropertySetter('expanded')]
+
+# Leave ctx.tmpdir at the example's default; see cvs2git-cvs.options
+# for why it must not be overridden here without also rebuilding
+# ctx.output_option.
+ctx.revision_collector = ExternalBlobGenerator(
+    blob_filename=os.path.join(ctx.tmpdir, 'git-blob.dat'),
+    )
