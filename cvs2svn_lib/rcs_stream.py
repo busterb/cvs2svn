@@ -14,17 +14,18 @@
 """This module processes RCS diffs (deltas)."""
 
 
-from cStringIO import StringIO
+from io import BytesIO
 import re
 
 
 def msplit(s):
-  """Split S into an array of lines.
+  r"""Split S into an array of lines.
 
-  Only \n is a line separator. The line endings are part of the lines."""
+  S is a bytes object holding raw RCS file/delta content.  Only \n is
+  a line separator. The line endings are part of the lines."""
 
   # return s.splitlines(True) clobbers \r
-  re = [ i + "\n" for i in s.split("\n") ]
+  re = [ i + b"\n" for i in s.split(b"\n") ]
   re[-1] = re[-1][:-1]
   if not re[-1]:
     del re[-1]
@@ -37,7 +38,7 @@ class MalformedDeltaException(Exception):
   pass
 
 
-ed_command_re = re.compile(r'^([ad])(\d+)\s(\d+)\n$')
+ed_command_re = re.compile(rb'^([ad])(\d+)\s(\d+)\n$')
 
 
 def generate_edits(diff):
@@ -67,7 +68,7 @@ def generate_edits(diff):
     command = m.group(1)
     start = int(m.group(2))
     count = int(m.group(3))
-    if command == 'd':
+    if command == b'd':
       # "d" - Delete command
       yield ('d', start - 1, count)
     else:
@@ -84,7 +85,7 @@ def merge_blocks(blocks):
   i = iter(blocks)
 
   try:
-    (command1, old_lines1, new_lines1) = i.next()
+    (command1, old_lines1, new_lines1) = next(i)
   except StopIteration:
     return
 
@@ -149,10 +150,10 @@ def write_edits(f, edits):
 
   for (command, input_position, arg) in edits:
     if command == 'd':
-      f.write('d%d %d\n' % (input_position + 1, arg,))
+      f.write(b'd%d %d\n' % (input_position + 1, arg,))
     elif command == 'a':
       lines = arg
-      f.write('a%d %d\n' % (input_position, len(lines),))
+      f.write(b'a%d %d\n' % (input_position, len(lines),))
       f.writelines(lines)
       del lines
     else:
@@ -179,7 +180,7 @@ class RCSStream:
   def get_text(self):
     """Return the current file content."""
 
-    return "".join(self._lines)
+    return b"".join(self._lines)
 
   def set_lines(self, lines):
     """Set the current contents to the specified LINES.
@@ -297,7 +298,7 @@ class RCSStream:
     Simultaneously generate an RCS diff suitable for reverting the
     change, and return it as a string."""
 
-    inverse_diff = StringIO()
+    inverse_diff = BytesIO()
     write_edits(
         inverse_diff, self.apply_and_invert_edits(generate_edits(diff))
         )

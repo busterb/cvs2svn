@@ -97,7 +97,7 @@ class RCSStreamTestCase(unittest.TestCase):
     self.assertEqual(s2.get_text(), new)
 
   def runTest(self):
-    self.assert_(os.path.isfile(self.filename + ',v'))
+    self.assertTrue(os.path.isfile(self.filename + ',v'))
     recorder = RCSRecorder()
 
     f = open(self.filename + ',v', 'rb')
@@ -138,28 +138,28 @@ def add_test_pair(name, v1, v2):
 
 def add_test(name, v1, v2):
   add_test_pair(name, v1, v2)
-  if v1.endswith('\n'):
+  if v1.endswith(b'\n'):
     add_test_pair(name + '-1', v1[:-1], v2)
-  if v2.endswith('\n'):
+  if v2.endswith(b'\n'):
     add_test_pair(name + '-2', v1, v2[:-1])
-  if v1.endswith('\n') and  v2.endswith('\n'):
+  if v1.endswith(b'\n') and  v2.endswith(b'\n'):
     add_test_pair(name + '-3', v1[:-1], v2[:-1])
 
 
-add_test('empty', '', '')
-add_test('ab-initio', '', 'blah\n')
+add_test('empty', b'', b'')
+add_test('ab-initio', b'', b'blah\n')
 
-add_test('delete-at-start', 'a\nb\nc\n', 'b\nc\n')
-add_test('delete-in-middle', 'a\nb\nc\n', 'a\nc\n')
-add_test('delete-at-end', 'a\nb\nc\n', 'a\nb\n')
+add_test('delete-at-start', b'a\nb\nc\n', b'b\nc\n')
+add_test('delete-in-middle', b'a\nb\nc\n', b'a\nc\n')
+add_test('delete-at-end', b'a\nb\nc\n', b'a\nb\n')
 
-add_test('replace-at-start', 'a\nb\nc\n', 'a1\nb\nc\n')
-add_test('replace-in-middle', 'a\nb\nc\n', 'a\nb1\nc\n')
-add_test('replace-at-end', 'a\nb\nc\n', 'a\nb\nc1\n')
+add_test('replace-at-start', b'a\nb\nc\n', b'a1\nb\nc\n')
+add_test('replace-in-middle', b'a\nb\nc\n', b'a\nb1\nc\n')
+add_test('replace-at-end', b'a\nb\nc\n', b'a\nb\nc1\n')
 
-add_test('enlarge-at-start', 'a\nb\nc\n', 'a1\na2\nb\nc\n')
-add_test('enlarge-in-middle', 'a\nb\nc\n', 'a\nb1\nb2\nc\n')
-add_test('enlarge-at-end', 'a\nb\nc\n', 'a\nb\nc1\nc2\n')
+add_test('enlarge-at-start', b'a\nb\nc\n', b'a1\na2\nb\nc\n')
+add_test('enlarge-in-middle', b'a\nb\nc\n', b'a\nb1\nb2\nc\n')
+add_test('enlarge-at-end', b'a\nb\nc\n', b'a\nb\nc1\nc2\n')
 
 
 unittest.TextTestRunner(verbosity=2).run(suite)

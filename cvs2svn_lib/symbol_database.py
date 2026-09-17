@@ -14,7 +14,7 @@
 """This module contains the SymbolDatabase class."""
 
 
-import cPickle
+import pickle
 
 from cvs2svn_lib import config
 from cvs2svn_lib.artifact_manager import artifact_manager
@@ -32,7 +32,7 @@ class SymbolDatabase:
     self._symbols = {}
 
     f = open(artifact_manager.get_temp_file(config.SYMBOL_DB), 'rb')
-    symbols = cPickle.load(f)
+    symbols = pickle.load(f)
     f.close()
     for symbol in symbols:
       self._symbols[symbol.id] = symbol
@@ -47,7 +47,7 @@ class SymbolDatabase:
   def __iter__(self):
     """Iterate over the Symbol instances within this database."""
 
-    return self._symbols.itervalues()
+    return iter(self._symbols.values())
 
   def close(self):
     self._symbols = None
@@ -60,6 +60,6 @@ def create_symbol_database(symbols):
   containing Trunk and TypedSymbol objects."""
 
   f = open(artifact_manager.get_temp_file(config.SYMBOL_DB), 'wb')
-  cPickle.dump(symbols, f, -1)
+  pickle.dump(symbols, f, -1)
   f.close()
 

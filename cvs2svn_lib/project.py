@@ -15,7 +15,7 @@
 
 
 import os
-import cPickle
+import pickle
 
 from cvs2svn_lib.context import Ctx
 from cvs2svn_lib.common import FatalError
@@ -209,7 +209,7 @@ class Project(object):
 def read_projects(filename):
   retval = {}
   f = open(filename, 'rb')
-  for project in cPickle.load(f):
+  for project in pickle.load(f):
     retval[project.id] = project
   f.close()
   return retval
@@ -217,7 +217,7 @@ def read_projects(filename):
 
 def write_projects(filename):
   f = open(filename, 'wb')
-  cPickle.dump(Ctx()._projects.values(), f, -1)
+  pickle.dump(Ctx()._projects.values(), f, -1)
   f.close()
 
 

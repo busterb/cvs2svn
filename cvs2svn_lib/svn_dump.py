@@ -104,7 +104,7 @@ class DumpstreamDelegate(SVNRepositoryDelegate):
     """Return PROPERTIES in the form needed for the dumpfile."""
 
     prop_strings = []
-    for (k, v) in sorted(properties.iteritems()):
+    for (k, v) in sorted(properties.items()):
       if k.startswith('_'):
         # Such properties are for internal use only.
         pass

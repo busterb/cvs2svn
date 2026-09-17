@@ -357,7 +357,7 @@ class CollateSymbolsPass(Pass):
       for rule in rule_list:
         rules[id(rule)] = rule
 
-    for rule in rules.itervalues():
+    for rule in rules.values():
       rule.start(self.symbol_stats)
 
     retval = {}
@@ -375,7 +375,7 @@ class CollateSymbolsPass(Pass):
         self.log_symbol_summary(stats, symbol)
         retval[stats.lod] = symbol
 
-    for rule in rules.itervalues():
+    for rule in rules.values():
       rule.finish()
 
     if self.symbol_info_file:
@@ -418,7 +418,7 @@ class CollateSymbolsPass(Pass):
     # are disjoint:
     Ctx().output_option.check_symbols(symbol_map)
 
-    for symbol in symbol_map.itervalues():
+    for symbol in symbol_map.values():
       if isinstance(symbol, ExcludedSymbol):
         self.symbol_stats.exclude_symbol(symbol)
 
@@ -1575,7 +1575,7 @@ class CreateRevsPass(Pass):
         artifact_manager.get_temp_file(config.CHANGESETS_ALLBROKEN_INDEX),
         DB_OPEN_READ)
 
-    for line in file(
+    for line in open(
             artifact_manager.get_temp_file(
                 config.CHANGESETS_SORTED_DATAFILE)):
       [changeset_id, timestamp] = [int(s, 16) for s in line.strip().split()]
@@ -1699,7 +1699,7 @@ class IndexSymbolsPass(Pass):
 
     f.close()
 
-    offsets_db = file(
+    offsets_db = open(
         artifact_manager.get_temp_file(config.SYMBOL_OFFSETS_DB), 'wb')
     cPickle.dump(offsets, offsets_db, -1)
     offsets_db.close()

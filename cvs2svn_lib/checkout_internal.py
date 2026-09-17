@@ -332,7 +332,7 @@ class TextRecordDatabase:
 
     There must not already be a record with the same id."""
 
-    assert not self.text_records.has_key(text_record.id)
+    assert text_record.id not in self.text_records
 
     self.text_records[text_record.id] = text_record
 
@@ -349,7 +349,7 @@ class TextRecordDatabase:
 
     Do not do anything with the old record."""
 
-    assert self.text_records.has_key(text_record.id)
+    assert text_record.id in self.text_records
     self.text_records[text_record.id] = text_record
 
   def discard(self, *ids):
@@ -383,7 +383,7 @@ class TextRecordDatabase:
       self.deferred_deletes.extend(ids)
 
   def itervalues(self):
-    return self.text_records.itervalues()
+    return iter(self.text_records.values())
 
   def recompute_refcounts(self, cvs_file_items):
     """Recompute the refcounts of the contained TextRecords.

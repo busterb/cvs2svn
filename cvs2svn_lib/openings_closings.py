@@ -14,7 +14,7 @@
 """This module contains classes to keep track of symbol openings/closings."""
 
 
-import cPickle
+import pickle
 
 from cvs2svn_lib import config
 from cvs2svn_lib.common import InternalError
@@ -135,12 +135,12 @@ class SymbolingsReader:
         'r')
     # The offsets_db is really small, and we need to read and write
     # from it a fair bit, so suck it into memory
-    offsets_db = file(
+    offsets_db = open(
         artifact_manager.get_temp_file(config.SYMBOL_OFFSETS_DB), 'rb')
     # A map from symbol_id to offset.  The values of this map are
     # incremented as the openings and closings for a symbol are
     # consumed.
-    self.offsets = cPickle.load(offsets_db)
+    self.offsets = pickle.load(offsets_db)
     offsets_db.close()
 
   def close(self):
@@ -212,7 +212,7 @@ class SymbolingsReader:
 
     # Make sure that all CVSSymbols are accounted for, and adjust the
     # closings to be not later than svn_symbol_commit.revnum.
-    for cvs_symbol in cvs_symbol_map.itervalues():
+    for cvs_symbol in cvs_symbol_map.values():
       try:
         range = range_map[cvs_symbol]
       except KeyError:

@@ -404,7 +404,7 @@ class _SymbolDataCollector(object):
     # A set of the indexes of entries that have to be removed from
     # symbol_defs:
     dup_indexes = set()
-    for ((name, revision), indexes) in known_definitions.iteritems():
+    for ((name, revision), indexes) in known_definitions.items():
       if len(indexes) > 1:
         logger.verbose(
             "in %r:\n"
@@ -852,7 +852,7 @@ class _FileDataCollector(Sink):
   def _get_cvs_revisions(self):
     """Generate the CVSRevisions present in this file."""
 
-    for rev_data in self._rev_data.itervalues():
+    for rev_data in self._rev_data.values():
       yield self._get_cvs_revision(rev_data)
 
   def _get_cvs_revision(self, rev_data):

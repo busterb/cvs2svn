@@ -18,8 +18,8 @@ also includes a function to read a StatsKeeper from a STATISTICS_FILE."""
 
 
 import time
-import cPickle
-from cStringIO import StringIO
+import pickle
+from io import StringIO
 
 from cvs2svn_lib.cvs_item import CVSRevision
 from cvs2svn_lib.cvs_item import CVSBranch
@@ -98,7 +98,7 @@ class StatsKeeper:
 
   def archive(self, filename):
     f = open(filename, 'wb')
-    cPickle.dump(self, f)
+    pickle.dump(self, f)
     f.close()
 
   def __str__(self):
@@ -151,8 +151,7 @@ class StatsKeeper:
         )
 
   def timings(self):
-    passes = self._pass_timings.keys()
-    passes.sort()
+    passes = sorted(self._pass_timings.keys())
     f = StringIO()
     f.write('Timings (seconds):\n')
     f.write('------------------\n')
@@ -180,7 +179,7 @@ def read_stats_keeper(filename):
   Read the instance from FILENAME as written by StatsKeeper.archive()."""
 
   f = open(filename, 'rb')
-  retval = cPickle.load(f)
+  retval = pickle.load(f)
   f.close()
   return retval
 

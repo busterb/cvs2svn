@@ -13,7 +13,7 @@
 
 """This module gathers and processes statistics about lines of development."""
 
-import cPickle
+import pickle
 
 from cvs2svn_lib import config
 from cvs2svn_lib.common import error_prefix
@@ -354,7 +354,7 @@ class SymbolStatisticsCollector:
     """Store the stats database to the SYMBOL_STATISTICS file."""
 
     f = open(artifact_manager.get_temp_file(config.SYMBOL_STATISTICS), 'wb')
-    cPickle.dump(self._stats.values(), f, -1)
+    pickle.dump(self._stats.values(), f, -1)
     f.close()
     self._stats = None
 
@@ -393,7 +393,7 @@ class SymbolStatistics:
     self._stats_by_id = { }
 
     f = open(filename, 'rb')
-    stats_list = cPickle.load(f)
+    stats_list = pickle.load(f)
     f.close()
 
     for stats in stats_list:
@@ -414,7 +414,7 @@ class SymbolStatistics:
     return self._stats[lod]
 
   def __iter__(self):
-    return self._stats.itervalues()
+    return iter(self._stats.values())
 
   def _check_blocked_excludes(self, symbol_map):
     """Check for any excluded LODs that are blocked by non-excluded symbols.
@@ -426,7 +426,7 @@ class SymbolStatistics:
     # blocked by the specified non-excluded blockers:
     problems = []
 
-    for lod in symbol_map.itervalues():
+    for lod in symbol_map.values():
       if isinstance(lod, ExcludedSymbol):
         # Symbol is excluded; make sure that its blockers are also
         # excluded:
@@ -464,7 +464,7 @@ class SymbolStatistics:
     logger.quiet("Checking for forced tags with commits...")
 
     invalid_tags = [ ]
-    for symbol in symbol_map.itervalues():
+    for symbol in symbol_map.values():
       if isinstance(symbol, Tag):
         stats = self.get_stats(symbol)
         if stats.branch_commit_count > 0:
@@ -502,7 +502,7 @@ class SymbolStatistics:
 
     # Check that the planned preferred parents are OK for all
     # IncludedSymbols:
-    for lod in symbol_map.itervalues():
+    for lod in symbol_map.values():
       if isinstance(lod, IncludedSymbol):
         stats = self.get_stats(lod)
         try:
@@ -533,7 +533,7 @@ class SymbolStatistics:
     del self._stats_by_id[symbol.id]
 
     # Remove references to this symbol from other statistics objects:
-    for stats in self._stats.itervalues():
+    for stats in iter(self._stats.values()):
       stats.branch_blockers.discard(symbol)
       if symbol in stats.possible_parents:
         del stats.possible_parents[symbol]

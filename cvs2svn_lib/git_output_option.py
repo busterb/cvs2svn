@@ -40,6 +40,28 @@ from cvs2svn_lib.artifact_manager import artifact_manager
 def cvs_item_is_executable(cvs_item):
   return 'svn:executable' in cvs_item.cvs_file.properties
 
+
+class _EncodingWriter(object):
+  """Wrap a binary-mode file object for the git-fast-import stream.
+
+  The stream mixes UTF-8 text (commands, commit metadata) with raw
+  binary blob content in the same byte stream, so str writes are
+  encoded to UTF-8 here and bytes writes (file content) pass through
+  unchanged, keeping every write() call site in this module agnostic
+  to that distinction."""
+
+  def __init__(self, f):
+    self._f = f
+
+  def write(self, s):
+    if isinstance(s, bytes):
+      self._f.write(s)
+    else:
+      self._f.write(s.encode('utf8'))
+
+  def close(self):
+    self._f.close()
+
 class GitRevisionWriter(MirrorUpdater):
 
   def start(self, mirror, f):
@@ -218,9 +240,9 @@ class GitOutputOption(DVCSOutputOption):
   def setup(self, svn_rev_count):
     DVCSOutputOption.setup(self, svn_rev_count)
     if self.dump_filename is None:
-      self.f = sys.stdout
+      self.f = _EncodingWriter(sys.stdout.buffer)
     else:
-      self.f = open(self.dump_filename, 'wb')
+      self.f = _EncodingWriter(open(self.dump_filename, 'wb'))
 
     # The youngest revnum that has been committed so far:
     self._youngest = 0
@@ -269,11 +291,24 @@ class GitOutputOption(DVCSOutputOption):
     return self._map_author(cvs_author)
 
   def _map_author(self, cvs_author):
+    # CVS-sourced authors arrive as UTF-8 bytes (see
+    # CleanMetadataPass._get_clean_author()); synthetic commits (e.g.
+    # project initialization) supply a plain str username instead.
+    # author_transforms is keyed by str, so normalize to str here.
+    if isinstance(cvs_author, bytes):
+      cvs_author = cvs_author.decode('utf8')
     return self.author_transforms.get(cvs_author, "%s <>" % (cvs_author,))
 
   @staticmethod
   def _get_log_msg(svn_commit):
-    return svn_commit.get_log_msg()
+    log_msg = svn_commit.get_log_msg()
+    # CVS-sourced log messages arrive as UTF-8 bytes; synthetic commits
+    # supply plain str instead.  Normalize to bytes here so that
+    # len(log_msg) below is the exact byte count git-fast-import's
+    # "data <count>" framing requires.
+    if not isinstance(log_msg, bytes):
+      log_msg = log_msg.encode('utf8')
+    return log_msg
 
   def process_initial_project_commit(self, svn_commit):
     self._mirror.start_commit(svn_commit.revnum)
@@ -306,7 +341,8 @@ class GitOutputOption(DVCSOutputOption):
         'committer %s %d +0000\n' % (author, svn_commit.date,)
         )
     self.f.write('data %d\n' % (len(log_msg),))
-    self.f.write('%s\n' % (log_msg,))
+    self.f.write(log_msg)
+    self.f.write('\n')
     for cvs_rev in svn_commit.get_cvs_items():
       self.revision_writer.process_revision(cvs_rev, post_commit=False)
 
@@ -337,7 +373,8 @@ class GitOutputOption(DVCSOutputOption):
         'committer %s %d +0000\n' % (author, svn_commit.date,)
         )
     self.f.write('data %d\n' % (len(log_msg),))
-    self.f.write('%s\n' % (log_msg,))
+    self.f.write(log_msg)
+    self.f.write('\n')
     self.f.write(
         'merge :%d\n'
         % (self._get_source_mark(source_lod, svn_commit.revnum),)
@@ -371,6 +408,8 @@ class GitOutputOption(DVCSOutputOption):
           "%Y-%m-%d %H:%M:%S UTC", time.gmtime(svn_commit.date)
           )
       log_msg = svn_commit.get_log_msg()
+      if isinstance(log_msg, bytes):
+        log_msg = log_msg.decode('utf8', 'replace')
       if log_msg.find('\n') != -1:
         log_msg = log_msg[:log_msg.index('\n')]
       return "%s %s %s '%s'" % (
@@ -412,7 +451,8 @@ class GitOutputOption(DVCSOutputOption):
     self.f.write('mark :%d\n' % (mark,))
     self.f.write('committer %s %d +0000\n' % (author, svn_commit.date,))
     self.f.write('data %d\n' % (len(log_msg),))
-    self.f.write('%s\n' % (log_msg,))
+    self.f.write(log_msg)
+    self.f.write('\n')
 
     # Only record actual DVCS ancestry for the primary sprout parent,
     # all the rest are effectively cherrypicks.
@@ -520,12 +560,15 @@ class GitOutputOption(DVCSOutputOption):
         mark2 = self._create_commit_mark(source_lod, svn_commit.revnum)
         author = self._map_author(Ctx().username)
         log_msg = self._get_log_msg_for_ancestry_tie(svn_commit)
+        if not isinstance(log_msg, bytes):
+          log_msg = log_msg.encode('utf8')
 
         self.f.write('commit %s\n' % (source_lod_git_branch,))
         self.f.write('mark :%d\n' % (mark2,))
         self.f.write('committer %s %d +0000\n' % (author, svn_commit.date,))
         self.f.write('data %d\n' % (len(log_msg),))
-        self.f.write('%s\n' % (log_msg,))
+        self.f.write(log_msg)
+        self.f.write('\n')
 
         self.f.write(
             'merge :%d\n'

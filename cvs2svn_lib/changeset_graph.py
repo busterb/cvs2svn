@@ -148,7 +148,7 @@ class ChangesetGraph(object):
     del self[changeset.id]
     del self._changeset_db[changeset.id]
 
-  def __nonzero__(self):
+  def __bool__(self):
     """Instances are considered True iff they contain any nodes."""
 
     return bool(self.nodes)
@@ -187,7 +187,7 @@ class ChangesetGraph(object):
     return self.nodes.keys()
 
   def __iter__(self):
-    return self.nodes.itervalues()
+    return iter(self.nodes.values())
 
   def _get_path(self, reachable_changesets, starting_node_id, ending_node_id):
     """Return the shortest path from ENDING_NODE_ID to STARTING_NODE_ID.
@@ -281,7 +281,7 @@ class ChangesetGraph(object):
       self._changeset_db,
       (
           node
-          for node in self.nodes.itervalues()
+          for node in self.nodes.values()
           if not node.pred_ids
           ),
       )
@@ -320,7 +320,7 @@ class ChangesetGraph(object):
       # Pick an arbitrary predecessor of node.  It must exist, because
       # there are no nopred nodes:
       try:
-        node_id = node.pred_ids.__iter__().next()
+        node_id = next(iter(node.pred_ids))
       except StopIteration:
         raise NoPredNodeInGraphException(node)
       node = self[node_id]
@@ -358,7 +358,7 @@ class ChangesetGraph(object):
       # This might raise StopIteration, but that indicates that the
       # graph has been fully consumed, so we just let the exception
       # escape.
-      start_node_id = self.nodes.iterkeys().next()
+      start_node_id = next(iter(self.nodes))
 
       cycle = self.find_cycle(start_node_id)
 

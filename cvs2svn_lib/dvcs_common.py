@@ -157,14 +157,9 @@ class DVCSOutputOption(OutputOption):
 
     result = {}
     if author_transforms is not None:
-      for (cvsauthor, dvcsauthor) in author_transforms.iteritems():
-        cvsauthor = to_utf8(cvsauthor)
-        if isinstance(dvcsauthor, basestring):
-          dvcsauthor = to_utf8(dvcsauthor)
-        else:
+      for (cvsauthor, dvcsauthor) in author_transforms.items():
+        if not isinstance(dvcsauthor, str):
           (name, email,) = dvcsauthor
-          name = to_utf8(name)
-          email = to_utf8(email)
           dvcsauthor = "%s <%s>" % (name, email,)
         result[cvsauthor] = dvcsauthor
     return result
@@ -218,7 +213,7 @@ class DVCSOutputOption(OutputOption):
     # {CVSSymbol : SVNRevisionRange}}:
     lod_range_maps = {}
 
-    for (cvs_symbol, range) in range_map.iteritems():
+    for (cvs_symbol, range) in range_map.items():
       lod_range_map = lod_range_maps.get(range.source_lod)
       if lod_range_map is None:
         lod_range_map = {}
@@ -390,12 +385,5 @@ class MirrorUpdater(object):
 
   def finish(self):
     del self._mirror
-
-
-def to_utf8(s):
-  if isinstance(s, unicode):
-    return s.encode('utf8')
-  else:
-    return s
 
 

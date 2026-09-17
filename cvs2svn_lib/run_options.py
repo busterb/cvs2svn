@@ -1130,7 +1130,9 @@ class RunOptions(object):
       'ctx' : Ctx(),
       'run_options' : self,
       }
-    execfile(options_filename, g)
+    with open(options_filename) as f:
+      code = compile(f.read(), options_filename, 'exec')
+    exec(code, g)
 
   def usage(self):
     self.parser.print_help()

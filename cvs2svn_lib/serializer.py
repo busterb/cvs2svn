@@ -14,9 +14,9 @@
 """Picklers and unpicklers that are primed with known objects."""
 
 
-import cStringIO
+import io
 import marshal
-import cPickle
+import pickle
 import zlib
 
 
@@ -83,40 +83,40 @@ class PrimedPickleSerializer(Serializer):
     which can be an arbitrary object (e.g., a list of objects that are
     expected to occur frequently in the objects to be serialized)."""
 
-    f = cStringIO.StringIO()
-    pickler = cPickle.Pickler(f, -1)
+    f = io.BytesIO()
+    pickler = pickle.Pickler(f, -1)
     pickler.dump(primer)
     self.pickler_memo = pickler.memo
 
-    unpickler = cPickle.Unpickler(cStringIO.StringIO(f.getvalue()))
+    unpickler = pickle.Unpickler(io.BytesIO(f.getvalue()))
     unpickler.load()
     self.unpickler_memo = unpickler.memo
 
   def dumpf(self, f, object):
     """Serialize OBJECT to file-like object F."""
 
-    pickler = cPickle.Pickler(f, -1)
+    pickler = pickle.Pickler(f, -1)
     pickler.memo = self.pickler_memo.copy()
     pickler.dump(object)
 
   def dumps(self, object):
     """Return a string containing OBJECT in serialized form."""
 
-    f = cStringIO.StringIO()
+    f = io.BytesIO()
     self.dumpf(f, object)
     return f.getvalue()
 
   def loadf(self, f):
     """Return the next object deserialized from file-like object F."""
 
-    unpickler = cPickle.Unpickler(f)
+    unpickler = pickle.Unpickler(f)
     unpickler.memo = self.unpickler_memo.copy()
     return unpickler.load()
 
   def loads(self, s):
     """Return the object deserialized from string S."""
 
-    return self.loadf(cStringIO.StringIO(s))
+    return self.loadf(io.BytesIO(s))
 
 
 class CompressingSerializer(Serializer):

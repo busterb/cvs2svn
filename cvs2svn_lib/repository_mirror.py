@@ -388,7 +388,7 @@ class _WritableMirrorDirectoryMixin:
 
     self.__class__ = DeletedCurrentMirrorDirectory
 
-    for (cvs_path, id) in self._entries.iteritems():
+    for (cvs_path, id) in self._entries.items():
       if id in self.repo._new_nodes:
         node = self[cvs_path]
         if isinstance(node, _WritableMirrorDirectoryMixin):
@@ -645,7 +645,7 @@ class _NodeDatabase(object):
   def _dump(self, node):
     return [
         (cvs_path.id, value)
-        for (cvs_path, value) in node.iteritems()
+        for (cvs_path, value) in node.items()
         ]
 
   def _determine_index(self, id):

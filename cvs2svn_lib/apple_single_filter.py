@@ -32,7 +32,7 @@ how it is used by Macintosh CVS clients:
 
 
 import struct
-from cStringIO import StringIO
+from io import BytesIO
 
 
 class AppleSingleFormatError(IOError):
@@ -91,7 +91,7 @@ class AppleSingleFilter(object):
   apple_single_magic = 0x00051600
   apple_single_version_1 = 0x00010000
   apple_single_version_2 = 0x00020000
-  apple_single_filler = '\0' * 16
+  apple_single_filler = b'\0' * 16
 
   apple_single_data_fork_entry_id = 1
 
@@ -141,7 +141,7 @@ class AppleSingleFilter(object):
       retval.append(s)
       length_remaining -= len(s)
 
-    return ''.join(retval)
+    return b''.join(retval)
 
   def _prepare_apple_single_file(self, num_entries):
     entries = self._read_exactly(num_entries * self.entry_len)
@@ -181,7 +181,7 @@ class AppleSingleFilter(object):
 
   def read(self, size=-1):
     if size == 0 or self.length_remaining == 0:
-      return ''
+      return b''
     elif size < 0:
       s = self._read_exactly(self.length_remaining)
       if len(s) < self.length_remaining:
@@ -215,7 +215,7 @@ class CompoundStream(object):
       while self.stream_index < len(self.streams):
         retval.append(self.streams[self.stream_index].read())
         self.stream_index += 1
-      return ''.join(retval)
+      return b''.join(retval)
     else:
       while self.stream_index < len(self.streams):
         s = self.streams[self.stream_index].read(size)
@@ -227,7 +227,7 @@ class CompoundStream(object):
           self.stream_index += 1
 
       # No streams are left:
-      return ''
+      return b''
 
   def close(self):
     for stream in self.streams:
@@ -248,7 +248,7 @@ def get_maybe_apple_single_stream(stream):
     return AppleSingleFilter(stream)
   except AppleSingleIncorrectMagicError as e:
     # This is OK; the file is not AppleSingle, so we read it normally:
-    string_io = StringIO(e.data_read)
+    string_io = BytesIO(e.data_read)
     if e.eof:
       # The original stream already reached EOF, so the part already
       # read contains the complete file contents.  Nevertheless return
@@ -267,7 +267,7 @@ def get_maybe_apple_single(data):
   If DATA is in AppleSingle format, then return its data fork.
   Otherwise, return the original DATA."""
 
-  return get_maybe_apple_single_stream(StringIO(data)).read()
+  return get_maybe_apple_single_stream(BytesIO(data)).read()
 
 
 if __name__ == '__main__':
@@ -287,13 +287,13 @@ if __name__ == '__main__':
   CHUNK_SIZE = 100
 
   if CHUNK_SIZE < 0:
-    sys.stdout.write(get_maybe_apple_single(sys.stdin.read()))
+    sys.stdout.buffer.write(get_maybe_apple_single(sys.stdin.buffer.read()))
   else:
-    f = get_maybe_apple_single_stream(sys.stdin)
+    f = get_maybe_apple_single_stream(sys.stdin.buffer)
     while True:
       s = f.read(CHUNK_SIZE)
       if not s:
         break
-      sys.stdout.write(s)
+      sys.stdout.buffer.write(s)
 
 

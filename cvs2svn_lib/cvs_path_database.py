@@ -14,7 +14,7 @@
 """This module contains database facilities used by cvs2svn."""
 
 
-import cPickle
+import pickle
 
 from cvs2svn_lib import config
 from cvs2svn_lib.common import DB_OPEN_READ
@@ -45,7 +45,7 @@ class CVSPathDatabase:
     elif self.mode == DB_OPEN_READ:
       f = open(artifact_manager.get_temp_file(config.CVS_PATHS_DB), 'rb')
       try:
-        cvs_paths = cPickle.load(f)
+        cvs_paths = pickle.load(f)
       finally:
         f.close()
       for cvs_path in cvs_paths:
@@ -67,7 +67,7 @@ class CVSPathDatabase:
     self._cvs_paths[cvs_path.id] = cvs_path
 
   def itervalues(self):
-    return self._cvs_paths.itervalues()
+    return self._cvs_paths.values()
 
   def get_path(self, id):
     """Return the CVSPath with the specified ID."""
@@ -78,7 +78,7 @@ class CVSPathDatabase:
     if self.mode == DB_OPEN_NEW:
       self.set_cvs_path_ordinals()
       f = open(artifact_manager.get_temp_file(config.CVS_PATHS_DB), 'wb')
-      cPickle.dump(self._cvs_paths.values(), f, -1)
+      pickle.dump(self._cvs_paths.values(), f, -1)
       f.close()
 
     self._cvs_paths = None

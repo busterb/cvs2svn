@@ -17,8 +17,8 @@
 import os
 import re
 import fnmatch
-import ConfigParser
-from cStringIO import StringIO
+import configparser
+from io import StringIO
 
 from cvs2svn_lib.common import warning_prefix
 from cvs2svn_lib.log import logger
@@ -122,7 +122,7 @@ class MimeMapper(FilePropertySetter):
       logger.error('Should specify MIME types file or dict.\n')
 
     if mime_types_file is not None:
-      for line in file(mime_types_file):
+      for line in open(mime_types_file):
         if line.startswith("#"):
           continue
 
@@ -142,7 +142,7 @@ class MimeMapper(FilePropertySetter):
           self.mappings[ext] = type
 
     if mime_mappings is not None:
-      for ext, type in mime_mappings.iteritems():
+      for ext, type in mime_mappings.items():
         ext = self.transform_case(ext)
         if ext in self.mappings and self.mappings[ext] != type:
           logger.error(
@@ -227,7 +227,7 @@ class AutoPropsPropertySetter(FilePropertySetter):
       return fnmatch.fnmatch(basename, self.pattern)
 
   def __init__(self, configfilename, ignore_case=True):
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     if ignore_case:
       self.transform_case = _squash_case
     else:
@@ -248,10 +248,9 @@ class AutoPropsPropertySetter(FilePropertySetter):
           % (warning_prefix, configfilename,)
           )
 
-    config.readfp(StringIO(configtext), configfilename)
+    config.read_file(StringIO(configtext), configfilename)
     self.patterns = []
-    sections = config.sections()
-    sections.sort()
+    sections = sorted(config.sections())
     for section in sections:
       if self.transform_case(section) == 'auto-props':
         patterns = config.options(section)

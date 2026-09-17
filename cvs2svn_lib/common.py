@@ -335,7 +335,7 @@ class CVSTextDecoder:
     Raise UnicodeError if the string cannot be decoded using any of
     the source encodings and no fallback encoding was specified."""
 
-    if isinstance(s, unicode):
+    if isinstance(s, str):
       return s
     for (name, decoder) in self.decoders:
       try:

@@ -176,7 +176,7 @@ class WriteBlobSink(Sink):
 
     revrecs_to_remove = [
         revrec
-        for revrec in self.revrecs.itervalues()
+        for revrec in self.revrecs.values()
         if not revrec.is_needed()
         ]
     while revrecs_to_remove:
