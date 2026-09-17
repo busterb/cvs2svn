@@ -84,12 +84,24 @@ class CommandError(FatalError):
 
 
 def canonicalize_eol(text, eol):
-  """Replace any end-of-line sequences in TEXT with the string EOL."""
+  """Replace any end-of-line sequences in TEXT with the string EOL.
 
-  text = text.replace('\r\n', '\n')
-  text = text.replace('\r', '\n')
-  if eol != '\n':
-    text = text.replace('\n', eol)
+  TEXT may be str (e.g. an already-decoded log message) or bytes
+  (raw RCS file content); EOL is normalized to match."""
+
+  if isinstance(text, bytes) and not isinstance(eol, bytes):
+    eol = eol.encode('ascii')
+  elif isinstance(text, str) and isinstance(eol, bytes):
+    eol = eol.decode('ascii')
+
+  newline = b'\n' if isinstance(text, bytes) else '\n'
+  cr = b'\r' if isinstance(text, bytes) else '\r'
+  crlf = cr + newline
+
+  text = text.replace(crlf, newline)
+  text = text.replace(cr, newline)
+  if eol != newline:
+    text = text.replace(newline, eol)
   return text
 
 
