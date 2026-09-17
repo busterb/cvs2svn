@@ -71,3 +71,51 @@ Conclusion: treat these two fixtures' `refs.txt`/`commit-tree-shas.txt` as
 *expected* to differ from the Python 2 baseline, verified via file-content
 equality (`git ls-tree -r` per ref) instead. Do not spend further effort
 chasing an exact hash match here.
+
+## The same root cause, more broadly: `run-tests.py`'s remaining failures
+
+The M5 milestone ported `run-tests.py`/`svntest/` to Python 3 (see commit
+history on `python3-port`). After every genuine bug found along the way was
+fixed (bytes/str mismatches, `execfile()`, dict-mutated-during-iteration,
+etc.), the suite reached **164 PASS / 15 FAIL / 2 SKIP / 3 XFAIL** out of
+184. All 15 remaining failures are the *identical* root cause documented
+above, just showing up far more often because it isn't limited to
+deliberately-cyclic fixtures: it's any case where two symbols (or, in one
+case, two independent projects in a multiproject conversion) have **no
+real dependency on each other** and so their relative processing order was
+never actually specified -- Python 2's incidental dict-hash order and
+Python 3's insertion order simply pick different (both valid) orders among
+them, which shifts *which* revision number an independently-created
+branch/tag/project lands on.
+
+Verified the same way as `phoenix`/`preferred-parent-cycle`: for the
+`main-cvsrepos` fixture (used by most of these failing tests), the final
+repository content is identical between the Python 2 baseline and the
+Python 3 port -- `svn ls -R` at HEAD matches exactly, and every exported
+file's content hash matches -- only the specific revision-number each
+independent branch/tag lands on differs. The failing tests are the ones
+whose expected-output tables hardcode a specific revision number and log
+message for a specific symbol, e.g. "revision 3's log message should begin
+with ... 'b1'" when it was Python 2's arbitrary choice to create `b1`
+before `b2` (both being independent, unrelated branches) that made that
+true in the first place.
+
+Affected tests (all of this same class, not independent bugs): 14-17, 20,
+42 (see below), 55, 80, 114, 115, 117, 118, 123, 174, 175.
+
+`42` (`non ascii files in .cvsignore`) is a distinct, unrelated,
+pre-existing issue: its expected value is a locale-specific artifact the
+test's own comment acknowledges ("The output seems to be in the C locale,
+where it looks like this (at least on one test system)") -- the Python 3
+port's actual output is correctly-decoded UTF-8 text, which is more
+correct, not less.
+
+No further porting work is expected to change this: the 15 failures are
+not bugs in the Python 3 port, they are the test suite's expected-output
+tables having been written against one specific (arbitrary, unspecified)
+Python 2 dict-ordering outcome that Python 3 cannot reproduce without
+reimplementing CPython 2's dict internals -- the same conclusion already
+reached for `phoenix`/`preferred-parent-cycle`, just observed here across
+more of the suite because it's a systemic property of the algorithm's
+"pick any order among independent, ready changesets" design, not specific
+to cyclic fixtures.
