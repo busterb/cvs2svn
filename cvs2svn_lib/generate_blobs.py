@@ -50,6 +50,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(sys.argv[0])))
 from cvs2svn_lib.rcsparser import Sink
 from cvs2svn_lib.rcsparser import parse
 from cvs2svn_lib.rcs_stream import RCSStream
+from cvs2svn_lib.common import canonicalize_eol
+from cvs2svn_lib.keyword_expander import expand_keywords
+from cvs2svn_lib.keyword_expander import collapse_keywords
+from cvs2svn_lib.apple_single_filter import get_maybe_apple_single
 
 
 def read_marks():
@@ -123,18 +127,34 @@ class RevRecord(object):
 
 
 class WriteBlobSink(Sink):
-  def __init__(self, blobfile, marks):
+  def __init__(self, blobfile, source, rcsfile_name, decode_apple_single, marks):
     self.blobfile = blobfile
+
+    # Needed to replicate AbstractRCSRevisionReader.get_content()'s
+    # keyword-expansion/EOL-fix/AppleSingle handling in-process,
+    # since there is no cvs/co subprocess (and no Ctx()) to lean on
+    # here. SOURCE and RCSFILE_NAME are constant for every revision
+    # of this RCS file; DECODE_APPLE_SINGLE is constant for the whole
+    # conversion.
+    self.source = source
+    self.rcsfile_name = rcsfile_name
+    self.decode_apple_single = decode_apple_single
 
     # A map {rev : RevRecord} for all of the revisions whose fulltext
     # will still be needed:
     self.revrecs = {}
 
+    # A map {rev : (eol_fix, keyword_handling, timestamp, author)}
+    # for every revision that needs a blob written:
+    self.rev_info = {}
+
     # The revisions that need marks will definitely be needed, so
     # create records for them now (the rest will be filled in while
     # reading the RCS file):
-    for (rev, mark) in marks.items():
+    for (rev, (mark, eol_fix, keyword_handling, timestamp, author)) \
+        in marks.items():
       self.revrecs[rev] = RevRecord(rev, mark)
+      self.rev_info[rev] = (eol_fix, keyword_handling, timestamp, author)
 
     # The RevRecord of the last fulltext that has been reconstructed,
     # if it still is_needed():
@@ -188,6 +208,30 @@ class WriteBlobSink(Sink):
         if not base_revrec.is_needed():
           revrecs_to_remove.append(base_revrec)
 
+  def _prepare_blob(self, rev, text):
+    """Return TEXT (bytes), transformed for blob output exactly as
+    AbstractRCSRevisionReader.get_content() would transform it for
+    REV. Must only be applied to the copy written to the blob file,
+    never to the fulltext used as the base for other revisions'
+    deltas, which must stay as the RCS file's raw stored bytes."""
+
+    (eol_fix, keyword_handling, timestamp, author) = self.rev_info[rev]
+
+    if self.decode_apple_single:
+      text = get_maybe_apple_single(text)
+
+    if keyword_handling == 'expanded':
+      text = expand_keywords(
+          text, rev, timestamp, author, self.source, self.rcsfile_name,
+          )
+    elif keyword_handling == 'collapsed':
+      text = collapse_keywords(text)
+
+    if eol_fix:
+      text = canonicalize_eol(text, eol_fix)
+
+    return text
+
   def set_revision_info(self, rev, log, text):
     revrec = self.revrecs.get(rev)
 
@@ -200,7 +244,7 @@ class WriteBlobSink(Sink):
       # fulltext is stored directly in the RCS file:
       assert self.last_revrec is None
       if revrec.mark is not None:
-        revrec.write_blob(self.blobfile, text)
+        revrec.write_blob(self.blobfile, self._prepare_blob(rev, text))
       if revrec.is_needed():
         self.last_revrec = revrec
         self.last_rcsstream = RCSStream(text)
@@ -213,7 +257,10 @@ class WriteBlobSink(Sink):
             )
       self.last_rcsstream.apply_diff(text)
       if revrec.mark is not None:
-        revrec.write_blob(self.blobfile, self.last_rcsstream.get_text())
+        revrec.write_blob(
+            self.blobfile,
+            self._prepare_blob(rev, self.last_rcsstream.get_text()),
+            )
       if revrec.is_needed():
         self.last_revrec = revrec
       else:
@@ -237,7 +284,9 @@ class WriteBlobSink(Sink):
       base_revrec.refs.remove(rev)
       rcsstream.apply_diff(text)
       if revrec.mark is not None:
-        revrec.write_blob(self.blobfile, rcsstream.get_text())
+        revrec.write_blob(
+            self.blobfile, self._prepare_blob(rev, rcsstream.get_text()),
+            )
       if revrec.is_needed():
         self.last_revrec = revrec
         self.last_rcsstream = rcsstream
@@ -248,16 +297,19 @@ class WriteBlobSink(Sink):
 
 
 def main(args):
-  [blobfilename] = args
+  [blobfilename, decode_apple_single_flag] = args
+  decode_apple_single = decode_apple_single_flag == '1'
   blobfile = open(blobfilename, 'w+b')
   while True:
     try:
-      (rcsfile, marks) = pickle.load(sys.stdin.buffer)
+      (rcsfile, source, rcsfile_name, marks) = pickle.load(sys.stdin.buffer)
     except EOFError:
       break
     f = open(rcsfile, 'rb')
     try:
-      parse(f, WriteBlobSink(blobfile, marks))
+      parse(f, WriteBlobSink(
+          blobfile, source, rcsfile_name, decode_apple_single, marks,
+          ))
     finally:
       f.close()
 

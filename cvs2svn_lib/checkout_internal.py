@@ -88,7 +88,7 @@ from cvs2svn_lib.cvs_item import CVSRevisionModification
 from cvs2svn_lib.indexed_database import IndexedDatabase
 from cvs2svn_lib.rcs_stream import RCSStream
 from cvs2svn_lib.rcs_stream import MalformedDeltaException
-from cvs2svn_lib.keyword_expander import expand_keywords
+from cvs2svn_lib.keyword_expander import expand_keywords_for_cvs_rev
 from cvs2svn_lib.keyword_expander import collapse_keywords
 from cvs2svn_lib.revision_manager import RevisionCollector
 from cvs2svn_lib.revision_manager import RevisionReader
@@ -742,7 +742,7 @@ class InternalRevisionReader(RevisionReader):
     elif keyword_handling == 'collapsed':
       text = collapse_keywords(text)
     elif keyword_handling == 'expanded':
-      text = expand_keywords(text, cvs_rev)
+      text = expand_keywords_for_cvs_rev(text, cvs_rev)
     else:
       raise FatalError(
           'Undefined _keyword_handling property (%r) for %s'

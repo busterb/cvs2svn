@@ -40,6 +40,7 @@ import pickle
 from cvs2svn_lib import config
 from cvs2svn_lib.common import FatalError
 from cvs2svn_lib.log import logger
+from cvs2svn_lib.context import Ctx
 from cvs2svn_lib.cvs_item import CVSRevisionDelete
 from cvs2svn_lib.revision_manager import RevisionCollector
 from cvs2svn_lib.key_generator import KeyGenerator
@@ -71,6 +72,7 @@ class ExternalBlobGenerator(RevisionCollector):
             sys.executable,
             os.path.join(os.path.dirname(__file__), 'generate_blobs.py'),
             blob_filename,
+            '1' if Ctx().decode_apple_single else '0',
             ],
         stdin=subprocess.PIPE,
         )
@@ -91,14 +93,33 @@ class ExternalBlobGenerator(RevisionCollector):
         if not isinstance(cvs_rev, CVSRevisionDelete):
           mark = self._mark_generator.gen_id()
           cvs_rev.revision_reader_token = mark
-          marks[cvs_rev.rev] = mark
+          # Ship everything generate_blobs.py's WriteBlobSink needs to
+          # replicate get_content()'s keyword-expansion/EOL-fix
+          # behavior itself, since it runs in a separate process with
+          # no access to Ctx() or the CVSRevision object graph.
+          eol_fix = cvs_rev.get_property('_eol_fix') or None
+          keyword_handling = cvs_rev.get_property('_keyword_handling') or None
+          author = Ctx()._metadata_db[cvs_rev.metadata_id].original_author
+          marks[cvs_rev.rev] = (
+              mark, eol_fix, keyword_handling, cvs_rev.timestamp, author,
+              )
 
     if marks:
+      cvs_file = cvs_file_items.cvs_file
+      project = cvs_file.project
+      source = '%s/%s%s' % (
+          project.cvs_repository_root,
+          project.cvs_module,
+          '/'.join(cvs_file.get_path_components(rcs=True)),
+          )
+      rcsfile_name = cvs_file.rcs_basename + ',v'
       # A separate pickler is used for each dump(), so that its memo
       # doesn't grow very large.  The default ASCII protocol is used so
       # that this works without changes on systems that distinguish
       # between text and binary files.
-      pickle.dump((cvs_file_items.cvs_file.rcs_path, marks), self._pipe.stdin)
+      pickle.dump(
+          (cvs_file.rcs_path, source, rcsfile_name, marks), self._pipe.stdin,
+          )
       self._pipe.stdin.flush()
 
     # Now that all CVSRevisions' revision_reader_tokens are set,

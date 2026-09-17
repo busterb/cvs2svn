@@ -153,3 +153,55 @@ handling) and is not a valid comparison point.
   `phoenix`/`preferred-parent-cycle`, confirmed the same way (file content at
   every ref matches exactly; only the arbitrary choice among independent,
   no-real-dependency changesets differs).
+
+## M7: performance, and extending `ExternalBlobGenerator`
+
+Benchmarked (`/usr/bin/time -l`, wall-clock + peak RSS) on the same
+openntpd/OpenBSD subset, same machine, native arm64 both sides -- no Docker,
+no cross-architecture emulation skew:
+
+| | Python 2 (anydbm) | Python 3 (SQLite), `CVSRevisionReader` | Python 3, `RCSRevisionReader` | Python 3, `ExternalBlobGenerator` |
+|---|---|---|---|---|
+| Wall clock | 127.9s | 136.0s | 196.2s | **24.6s** |
+| Peak RSS | 64.9 MB | 73.0 MB | 74.4 MB | 73.0 MB |
+| `sys` time | 48.3s | 51.1s | 64.2s | 3.7s |
+
+Findings:
+
+- The SQLite persistence rewrite (the original justification for expecting a
+  performance win) is a wash: Python 3 with `CVSRevisionReader` is actually
+  ~6% *slower* than the Python 2 baseline and uses more memory. The
+  persistence layer was never the bottleneck.
+- The real bottleneck is `CVSRevisionReader`/`RCSRevisionReader` spawning a
+  `cvs`/`co` subprocess **per CVS revision** (20,886 of them here) --
+  confirmed by `sys` time alone accounting for ~40% of wall-clock in both.
+  `RCSRevisionReader` tested *slower* than `CVSRevisionReader` here, the
+  opposite of what cvs2git's own options-file comments claim -- traced to
+  Homebrew's `co` being a shell-script wrapper around a multi-call `rcs`
+  binary (an extra process spawn per revision), an environment/packaging
+  artifact, not a property of RCS itself.
+- `ExternalBlobGenerator` (spawns `generate_blobs.py` once, reconstructs
+  every revision's fulltext in-process from RCS deltas, no per-revision
+  subprocess at all) eliminates the bottleneck entirely: **5.5x faster**
+  than `CVSRevisionReader`, `sys` time down to 3.7s.
+- It was not usable as shipped: `generate_blobs.py`'s `WriteBlobSink` wrote
+  raw RCS fulltext with **no keyword expansion or EOL fixing**, silently
+  incompatible with `KeywordHandlingPropertySetter('expanded')` (load-bearing
+  for OpenBSD's `$OpenBSD: file,v REV DATE AUTHOR Exp $` markers). Extended
+  it to replicate `AbstractRCSRevisionReader.get_content()`'s keyword
+  expansion / EOL-fix / AppleSingle-decode logic in-process: refactored
+  `_KeywordExpander`/`expand_keywords()` in `keyword_expander.py` to accept
+  plain values instead of a `CVSRevision` (needed since `generate_blobs.py`
+  runs in a separate process with no access to `Ctx()` or the CVSRevision
+  object graph), and had `ExternalBlobGenerator.process_file()` ship each
+  revision's `(eol_fix, keyword_handling, timestamp, author)` over the
+  existing pickle pipe to `generate_blobs.py`.
+- Validated the same way as M6: after the extension, all 124 refs converted
+  via `ExternalBlobGenerator` are byte-identical in file content to the
+  Python 2 oracle, and in fact **identical commit SHAs** to the
+  `CVSRevisionReader` Python 3 run too (not just matching tree content) --
+  the strongest possible confirmation that the extension is fully
+  behavior-preserving, not just "close enough."
+- No existing test (`run-tests.py` or `test-data` fixtures) exercises
+  `ExternalBlobGenerator` at all -- this path was validated only via the
+  real-repo oracle comparison above. Worth adding dedicated coverage.

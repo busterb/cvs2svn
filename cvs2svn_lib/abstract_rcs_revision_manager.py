@@ -19,7 +19,7 @@ from cvs2svn_lib.common import FatalError
 from cvs2svn_lib.process import get_command_output
 from cvs2svn_lib.context import Ctx
 from cvs2svn_lib.revision_manager import RevisionReader
-from cvs2svn_lib.keyword_expander import expand_keywords
+from cvs2svn_lib.keyword_expander import expand_keywords_for_cvs_rev
 from cvs2svn_lib.keyword_expander import collapse_keywords
 from cvs2svn_lib.apple_single_filter import get_maybe_apple_single
 
@@ -78,7 +78,7 @@ class AbstractRCSRevisionReader(RevisionReader):
       data = get_maybe_apple_single(data)
 
     if explicit_keyword_handling == 'expanded':
-      data = expand_keywords(data, cvs_rev)
+      data = expand_keywords_for_cvs_rev(data, cvs_rev)
     elif explicit_keyword_handling == 'collapsed':
       data = collapse_keywords(data)
 

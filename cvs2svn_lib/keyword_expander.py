@@ -45,8 +45,22 @@ class _KeywordExpander:
       using CVS 1.11."""
       klass.date_fmt = klass.date_fmt_old
 
-  def __init__(self, cvs_rev):
-    self.cvs_rev = cvs_rev
+  def __init__(self, rev, timestamp, author, source, rcsfile):
+    """Substitutions for a single revision's keyword expansion.
+
+    REV is the revision number (str).  TIMESTAMP is a POSIX timestamp
+    (int/float).  AUTHOR is the revision's original CVS author
+    (bytes; author is UTF-8 bytes throughout the metadata pipeline,
+    see CleanMetadataPass._get_clean_author()).  SOURCE and RCSFILE
+    are the pre-formatted strings needed for the $Header$/$Id$
+    keywords.  Kept decoupled from CVSRevision/Ctx() so that this
+    class can also be used from generate_blobs.py's separate
+    process, which has no access to either."""
+    self.rev = rev
+    self.timestamp = timestamp
+    self.author_bytes = author
+    self.source_str = source
+    self.rcsfile_str = rcsfile
 
   def __call__(self, match):
     keyword = match.group(1)
@@ -56,23 +70,21 @@ class _KeywordExpander:
     return b'$' + keyword + b': ' + value + b' $'
 
   def author(self):
-    # Left as bytes: author is UTF-8 bytes throughout the metadata
-    # pipeline (see CleanMetadataPass._get_clean_author()).
-    return Ctx()._metadata_db[self.cvs_rev.metadata_id].original_author
+    return self.author_bytes
 
   def date(self):
-    return time.strftime(self.date_fmt, time.gmtime(self.cvs_rev.timestamp))
+    return time.strftime(self.date_fmt, time.gmtime(self.timestamp))
 
   def header(self):
     return '%s %s %s %s Exp' % (
-        self.source(), self.cvs_rev.rev, self.date(),
-        self.author().decode('utf8'),
+        self.source_str, self.rev, self.date(),
+        self.author_bytes.decode('utf8'),
         )
 
   def id(self):
     return '%s %s %s %s Exp' % (
-        self.rcsfile(), self.cvs_rev.rev, self.date(),
-        self.author().decode('utf8'),
+        self.rcsfile_str, self.rev, self.date(),
+        self.author_bytes.decode('utf8'),
         )
 
   def locker(self):
@@ -90,18 +102,13 @@ class _KeywordExpander:
     return 'not supported by cvs2svn'
 
   def rcsfile(self):
-    return self.cvs_rev.cvs_file.rcs_basename + ",v"
+    return self.rcsfile_str
 
   def revision(self):
-    return self.cvs_rev.rev
+    return self.rev
 
   def source(self):
-    project = self.cvs_rev.cvs_file.project
-    return '%s/%s%s' % (
-        project.cvs_repository_root,
-        project.cvs_module,
-        '/'.join(self.cvs_rev.cvs_file.get_path_components(rcs=True)),
-        )
+    return self.source_str
 
   def state(self):
     # We check out only live revisions.
@@ -113,12 +120,33 @@ _kw_re = re.compile(rb'\$(' + _kws + rb'):[^$\n]*\$')
 _kwo_re = re.compile(rb'\$(' + _kws + rb')(:[^$\n]*)?\$')
 
 
-def expand_keywords(text, cvs_rev):
+def expand_keywords(text, rev, timestamp, author, source, rcsfile):
+  """Return TEXT (bytes) with keywords expanded.
+
+  REV, TIMESTAMP, AUTHOR, SOURCE, and RCSFILE are as documented on
+  _KeywordExpander.__init__().  E.g., '$Author$' -> '$Author: jrandom
+  $'."""
+
+  return _kwo_re.sub(
+      _KeywordExpander(rev, timestamp, author, source, rcsfile), text,
+      )
+
+
+def expand_keywords_for_cvs_rev(text, cvs_rev):
   """Return TEXT (bytes) with keywords expanded for CVS_REV.
 
-  E.g., '$Author$' -> '$Author: jrandom $'."""
+  Convenience wrapper around expand_keywords() for callers that have
+  a full CVSRevision (and therefore access to Ctx()) available."""
 
-  return _kwo_re.sub(_KeywordExpander(cvs_rev), text)
+  project = cvs_rev.cvs_file.project
+  source = '%s/%s%s' % (
+      project.cvs_repository_root,
+      project.cvs_module,
+      '/'.join(cvs_rev.cvs_file.get_path_components(rcs=True)),
+      )
+  rcsfile = cvs_rev.cvs_file.rcs_basename + ",v"
+  author = Ctx()._metadata_db[cvs_rev.metadata_id].original_author
+  return expand_keywords(text, cvs_rev.rev, cvs_rev.timestamp, author, source, rcsfile)
 
 
 def collapse_keywords(text):
