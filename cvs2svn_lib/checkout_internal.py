@@ -94,7 +94,7 @@ from cvs2svn_lib.revision_manager import RevisionCollector
 from cvs2svn_lib.revision_manager import RevisionReader
 from cvs2svn_lib.serializer import MarshalSerializer
 from cvs2svn_lib.serializer import CompressingSerializer
-from cvs2svn_lib.serializer import PrimedPickleSerializer
+from cvs2svn_lib.serializer import PickleSerializer
 from cvs2svn_lib.apple_single_filter import get_maybe_apple_single
 
 from cvs2svn_lib.rcsparser import Sink
@@ -586,11 +586,10 @@ class InternalRevisionCollector(RevisionCollector):
         artifact_manager.get_temp_file(config.RCS_DELTAS_INDEX_TABLE),
         DB_OPEN_NEW, serializer,
         )
-    primer = (FullTextRecord, DeltaTextRecord)
     self._rcs_trees = IndexedDatabase(
         artifact_manager.get_temp_file(config.RCS_TREES_STORE),
         artifact_manager.get_temp_file(config.RCS_TREES_INDEX_TABLE),
-        DB_OPEN_NEW, PrimedPickleSerializer(primer),
+        DB_OPEN_NEW, PickleSerializer(),
         )
 
   def _writeout(self, text_record, text):

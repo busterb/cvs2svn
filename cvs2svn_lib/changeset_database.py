@@ -14,17 +14,11 @@
 """This module contains classes to store changesets."""
 
 
-from cvs2svn_lib.changeset import Changeset
-from cvs2svn_lib.changeset import RevisionChangeset
-from cvs2svn_lib.changeset import OrderedChangeset
-from cvs2svn_lib.changeset import SymbolChangeset
-from cvs2svn_lib.changeset import BranchChangeset
-from cvs2svn_lib.changeset import TagChangeset
 from cvs2svn_lib.record_table import UnsignedIntegerPacker
 from cvs2svn_lib.record_table import MmapRecordTable
 from cvs2svn_lib.record_table import RecordTable
 from cvs2svn_lib.indexed_database import IndexedStore
-from cvs2svn_lib.serializer import PrimedPickleSerializer
+from cvs2svn_lib.serializer import PickleSerializer
 
 
 # Should the CVSItemToChangesetTable database files be memory mapped?
@@ -44,16 +38,8 @@ def CVSItemToChangesetTable(filename, mode):
 
 class ChangesetDatabase(IndexedStore):
   def __init__(self, filename, index_filename, mode):
-    primer = (
-        Changeset,
-        RevisionChangeset,
-        OrderedChangeset,
-        SymbolChangeset,
-        BranchChangeset,
-        TagChangeset,
-        )
     IndexedStore.__init__(
-        self, filename, index_filename, mode, PrimedPickleSerializer(primer))
+        self, filename, index_filename, mode, PickleSerializer())
 
   def store(self, changeset):
     self.add(changeset)

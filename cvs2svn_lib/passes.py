@@ -31,7 +31,7 @@ from cvs2svn_lib.common import Timestamper
 from cvs2svn_lib.sort import sort_file
 from cvs2svn_lib.log import logger
 from cvs2svn_lib.pass_manager import Pass
-from cvs2svn_lib.serializer import PrimedPickleSerializer
+from cvs2svn_lib.serializer import PickleSerializer
 from cvs2svn_lib.artifact_manager import artifact_manager
 from cvs2svn_lib.cvs_path_database import CVSPathDatabase
 from cvs2svn_lib.metadata_database import MetadataDatabase
@@ -52,7 +52,6 @@ from cvs2svn_lib.cvs_item import CVSRevision
 from cvs2svn_lib.cvs_item import CVSSymbol
 from cvs2svn_lib.cvs_item_database import OldCVSItemStore
 from cvs2svn_lib.cvs_item_database import IndexedCVSItemStore
-from cvs2svn_lib.cvs_item_database import cvs_item_primer
 from cvs2svn_lib.cvs_item_database import NewSortableCVSRevisionDatabase
 from cvs2svn_lib.cvs_item_database import OldSortableCVSRevisionDatabase
 from cvs2svn_lib.cvs_item_database import NewSortableCVSSymbolDatabase
@@ -461,7 +460,7 @@ class FilterSymbolsPass(Pass):
     cvs_item_store = OldCVSItemStore(
         artifact_manager.get_temp_file(config.CVS_ITEMS_STORE))
 
-    cvs_item_serializer = PrimedPickleSerializer(cvs_item_primer)
+    cvs_item_serializer = PickleSerializer()
     f = open(artifact_manager.get_temp_file(config.ITEM_SERIALIZER), 'wb')
     pickle.dump(cvs_item_serializer, f, -1)
     f.close()

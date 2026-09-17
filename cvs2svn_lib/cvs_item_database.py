@@ -17,26 +17,9 @@
 import re
 import pickle
 
-from cvs2svn_lib.cvs_item import CVSRevisionAdd
-from cvs2svn_lib.cvs_item import CVSRevisionChange
-from cvs2svn_lib.cvs_item import CVSRevisionDelete
-from cvs2svn_lib.cvs_item import CVSRevisionNoop
-from cvs2svn_lib.cvs_item import CVSBranch
-from cvs2svn_lib.cvs_item import CVSBranchNoop
-from cvs2svn_lib.cvs_item import CVSTag
-from cvs2svn_lib.cvs_item import CVSTagNoop
-from cvs2svn_lib.cvs_file_items import CVSFileItems
 from cvs2svn_lib.serializer import Serializer
-from cvs2svn_lib.serializer import PrimedPickleSerializer
+from cvs2svn_lib.serializer import PickleSerializer
 from cvs2svn_lib.indexed_database import IndexedStore
-
-
-cvs_item_primer = (
-    CVSRevisionAdd, CVSRevisionChange,
-    CVSRevisionDelete, CVSRevisionNoop,
-    CVSBranch, CVSBranchNoop,
-    CVSTag, CVSTagNoop,
-    )
 
 
 class NewCVSItemStore:
@@ -55,9 +38,7 @@ class NewCVSItemStore:
 
     self.f = open(filename, 'wb')
 
-    self.serializer = PrimedPickleSerializer(
-        cvs_item_primer + (CVSFileItems,)
-        )
+    self.serializer = PickleSerializer()
     pickle.dump(self.serializer, self.f, -1)
 
   def add(self, cvs_file_items):
@@ -239,7 +220,7 @@ class OldSortableCVSSymbolDatabase(object):
 def IndexedCVSItemStore(filename, index_filename, mode):
   return IndexedStore(
       filename, index_filename, mode,
-      PrimedPickleSerializer(cvs_item_primer)
+      PickleSerializer()
       )
 
 

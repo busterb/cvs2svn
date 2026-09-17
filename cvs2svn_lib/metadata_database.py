@@ -19,7 +19,7 @@ from hashlib import sha1
 from cvs2svn_lib.context import Ctx
 from cvs2svn_lib.indexed_database import IndexedDatabase
 from cvs2svn_lib.key_generator import KeyGenerator
-from cvs2svn_lib.serializer import PrimedPickleSerializer
+from cvs2svn_lib.serializer import PickleSerializer
 from cvs2svn_lib.metadata import Metadata
 
 
@@ -34,7 +34,7 @@ def MetadataDatabase(store_filename, index_table_filename, mode):
 
   return IndexedDatabase(
       store_filename, index_table_filename,
-      mode, PrimedPickleSerializer((Metadata,)),
+      mode, PickleSerializer(),
       )
 
 
