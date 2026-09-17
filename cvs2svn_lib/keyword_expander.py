@@ -65,12 +65,14 @@ class _KeywordExpander:
 
   def header(self):
     return '%s %s %s %s Exp' % (
-        self.source(), self.cvs_rev.rev, self.date(), self.author(),
+        self.source(), self.cvs_rev.rev, self.date(),
+        self.author().decode('utf8'),
         )
 
   def id(self):
     return '%s %s %s %s Exp' % (
-        self.rcsfile(), self.cvs_rev.rev, self.date(), self.author(),
+        self.rcsfile(), self.cvs_rev.rev, self.date(),
+        self.author().decode('utf8'),
         )
 
   def locker(self):

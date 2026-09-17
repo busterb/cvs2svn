@@ -119,3 +119,37 @@ reached for `phoenix`/`preferred-parent-cycle`, just observed here across
 more of the suite because it's a systemic property of the algorithm's
 "pick any order among independent, ready changesets" design, not specific
 to cyclic fixtures.
+
+## M6: real-world validation (openntpd/OpenBSD CVS subset)
+
+Validated against the user's real `cvs2git.options` and their openntpd-related
+OpenBSD CVS subset (1462 files, 20886 revisions, 9783 SVN commits, 60
+branches, 63 tags). Oracle was the actual pre-port Python 2 code (worktree at
+`8cd432386e6c412a5b6ed506679185e0766671f`, run under a native pyenv Python
+2.7.18, not Docker, for speed) run with the identical options file -- not the
+generic `cvs2git-example.options`, which produces a materially different
+conversion (different symbol transforms, keyword handling, attic-file
+handling) and is not a valid comparison point.
+
+- **Found and fixed a real bug**: `keyword_expander.py`'s `header()`/`id()`
+  interpolated `self.author()` (deliberately left as `bytes`, since author
+  names are UTF-8 bytes throughout the metadata pipeline) directly into a
+  `'%s' % (...)` format alongside `str` values. In Python 2 this was a no-op
+  (`bytes is str`); in Python 3 it stringified the bytes object's `repr()`,
+  corrupting every RCS `$Id$`/`$Header$` keyword expansion's author field,
+  e.g. `$Id: login.c,v 1.3 ... b'downsj' Exp $` instead of `... downsj Exp $`.
+  Fixed by decoding `self.author()` to `str` at the two interpolation sites.
+  Caught by this real-repo validation, not by `run-tests.py` or the
+  `test-data` fixtures -- none of them exercise `KeywordHandlingPropertySetter
+  ('expanded')` combined with a non-ASCII-adjacent multi-value format string
+  the way real CVS history does.
+- After the fix: **all 124 refs (61 branches + 63 tags) are byte-identical in
+  file content** between the Python 2 oracle and the Python 3 port (`git
+  ls-tree -r`, every path and blob SHA, for every ref) -- zero mismatches.
+  Total commit count across all refs matches exactly (9678 both).
+- 16 refs (8 branch/tag pairs: `OPENBSD_4_1`, `OPENBSD_4_2`, `OPENBSD_5_6`
+  through `OPENBSD_6_0`, `OPENBSD_7_6`) differ by commit SHA only -- the same
+  benign dict-ordering-tie-break class documented above for
+  `phoenix`/`preferred-parent-cycle`, confirmed the same way (file content at
+  every ref matches exactly; only the arbitrary choice among independent,
+  no-real-dependency changesets differs).
