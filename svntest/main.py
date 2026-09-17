@@ -1321,7 +1321,7 @@ class TestRunner:
             # A safe starting assumption.
             milestone = 'unknown'
             if milestones_dict:
-              if milestones_dict.has_key(str(issue)):
+              if str(issue) in milestones_dict:
                 milestone = milestones_dict[str(issue)]
 
             filter_issues.append(str(issue) + '(' + milestone + ')')
