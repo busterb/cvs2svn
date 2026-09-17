@@ -1,0 +1,232 @@
+PASS:  run-tests.py 1: cvs2svn with no arguments shows usage
+PASS:  run-tests.py 2: generate a manpage for cvs2svn
+PASS:  run-tests.py 3: generate a manpage for cvs2git
+SKIP:  run-tests.py 4: generate a manpage for cvs2hg
+PASS:  run-tests.py 5: detection of the executable flag
+PASS:  run-tests.py 6: conversion of filename with a space
+PASS:  run-tests.py 7: two commits in quick succession
+PASS:  run-tests.py 8: prune, but never too much
+PASS:  run-tests.py 9: prune, but never too much...variant 1
+PASS:  run-tests.py 10: prune, but never too much...variant 2
+PASS:  run-tests.py 11: prune, but never too much...variant 3
+PASS:  run-tests.py 12: two interleaved trunk commits, different log msgs
+PASS:  run-tests.py 13: simple trunk commits
+PASS:  run-tests.py 14: simple tags and branches, no commits
+PASS:  run-tests.py 15: simple tags and branches, no commits...variant 1
+PASS:  run-tests.py 16: simple tags and branches, no commits...variant 2
+PASS:  run-tests.py 17: simple tags and branches, no commits...variant 3
+PASS:  run-tests.py 18: simple branch commits
+PASS:  run-tests.py 19: mixed-time tag
+PASS:  run-tests.py 20: mixed-time branch, and a file added to the branch
+PASS:  run-tests.py 21: a commit affecting both trunk and a branch
+PASS:  run-tests.py 22: branch some trunk files, and later branch the rest
+PASS:  run-tests.py 23: conversion of invalid symbolic names
+PASS:  run-tests.py 24: ignore a file with a branch with two names
+PASS:  run-tests.py 25: convert a branch file rooted in a 'dead' revision
+PASS:  run-tests.py 26: convert a branch file rooted in a 'dea...variant 1
+PASS:  run-tests.py 27: handle a control char in a log message
+PASS:  run-tests.py 28: handle tags rooted in a redeleted revision
+PASS:  run-tests.py 29: ensure that trunk doesn't get pruned
+PASS:  run-tests.py 30: ensure that trunk doesn't get pruned...variant 1
+PASS:  run-tests.py 31: ensure that trunk doesn't get pruned...variant 2
+PASS:  run-tests.py 32: ensure that trunk doesn't get pruned...variant 3
+PASS:  run-tests.py 33: file deleted twice, in the root of the repository
+PASS:  run-tests.py 34: branch created from both trunk and another branch
+PASS:  run-tests.py 35: resyncing should not misorder commit groups
+PASS:  run-tests.py 36: allow tags with mixed trunk and branch sources
+PASS:  run-tests.py 37: allow tags with mixed trunk and branch...variant 1
+PASS:  run-tests.py 38: never use the rev-in-progress as a copy source
+PASS:  run-tests.py 39: do use the last completed rev as a copy source
+PASS:  run-tests.py 40: correctly handle deletion as initial branch action
+PASS:  run-tests.py 41: correctly handle deletion as initial b...variant 1
+PASS:  run-tests.py 42: non ascii files in .cvsignore
+SKIP:  run-tests.py 43: non ascii files converted incorrectly
+PASS:  run-tests.py 44: author name contains Unicode
+PASS:  run-tests.py 45: author name contains Unicode...variant encoding
+PASS:  run-tests.py 46: author name contains U...variant fallback-encoding
+PASS:  run-tests.py 47: log message contains Unicode
+PASS:  run-tests.py 48: log message contains Unicode...variant encoding
+PASS:  run-tests.py 49: log message contains U...variant fallback-encoding
+PASS:  run-tests.py 50: avoid spurious changes for initial revs
+PASS:  run-tests.py 51: handle vendor branches with --trunk-only
+PASS:  run-tests.py 52: handle default branches correctly
+PASS:  run-tests.py 53: handle default branches with --trunk-only
+PASS:  run-tests.py 54: do not allow 1.2 revision with default branch
+PASS:  run-tests.py 55: compose a tag from three sources
+PASS:  run-tests.py 56: reserve a svn revnum for a fill only when required
+PASS:  run-tests.py 57: make sure that filling prunes paths correctly
+PASS:  run-tests.py 58: make sure that filling prunes paths co...variant 1
+PASS:  run-tests.py 59: don't break when the trunk is empty
+PASS:  run-tests.py 60: don't break when the trunk is empty...variant 1
+PASS:  run-tests.py 61: don't break when the trunk is empty...variant 2
+PASS:  run-tests.py 62: ensure that we don't create any spurious commits
+PASS:  run-tests.py 63: verify correct revs are copied to default branches
+PASS:  run-tests.py 64: run each pass individually
+PASS:  run-tests.py 65: reveal a big bug in our resync algorithm
+PASS:  run-tests.py 66: reveal a bug in our default branch detection code
+PASS:  run-tests.py 67: die if a file exists in and out of the attic
+PASS:  run-tests.py 68: test --retain-conflicting-attic-files option
+PASS:  run-tests.py 69: reveal a big bug in our SymbolFillingGuide
+PASS:  run-tests.py 70: eol settings and mime types together...variant 1
+PASS:  run-tests.py 71: eol settings and mime types together...variant 2
+PASS:  run-tests.py 72: eol settings and mime types together...variant 3
+PASS:  run-tests.py 73: eol settings and mime types together...variant 4
+PASS:  run-tests.py 74: test non-setting of cvs2svn:cvs-rev property
+PASS:  run-tests.py 75: test setting of cvs2svn:cvs-rev property
+PASS:  run-tests.py 76: test setting of svn:keywords property among others
+PASS:  run-tests.py 77: test setting of svn:ignore property
+PASS:  run-tests.py 78: test that CVS can still do what RCS can't
+PASS:  run-tests.py 79: test that we can handle weird branch names
+PASS:  run-tests.py 80: test that we can handle weird tag names
+PASS:  run-tests.py 81: reveal a bug that reorders file revisions
+PASS:  run-tests.py 82: test that exclude really excludes everything
+PASS:  run-tests.py 83: add trunk file that was deleted on vendor branch
+PASS:  run-tests.py 84: ensure pass2 doesn't pull rev too far forward
+PASS:  run-tests.py 85: only LFs for svn:eol-style=native files
+PASS:  run-tests.py 86: reveal a bug that created a branch twice
+W: CWD: /src
+W: EXCEPTION: Failure: Symbol filled twice in a row
+Traceback (most recent call last):
+  File "/src/svntest/main.py", line 1402, in run
+    rc = self.pred.run(sandbox)
+  File "/src/svntest/testcase.py", line 114, in run
+    return self._delegate.run(sandbox)
+  File "./run-tests.py", line 845, in run
+    return self.func()
+  File "./run-tests.py", line 2576, in double_fill2
+    raise Failure('Symbol filled twice in a row')
+Failure: Symbol filled twice in a row
+XFAIL: run-tests.py 87: reveal a second bug that created a branch twice
+PASS:  run-tests.py 88: ensure pass2 doesn't push rev too far backward
+PASS:  run-tests.py 89: reveal a bug that added a branch file twice
+PASS:  run-tests.py 90: reveal a bug that copies a branch file wrongly
+PASS:  run-tests.py 91: require error if ttb directories are not disjoint
+PASS:  run-tests.py 92: test auto-props
+PASS:  run-tests.py 93: do not allow control characters in filenames
+PASS:  run-tests.py 94: interleaved and multi-branch commits to same files
+PASS:  run-tests.py 95: cvs2svn --help-passes shows pass information
+PASS:  run-tests.py 96: multiple tags referring to same revision
+PASS:  run-tests.py 97: multiple definitions of symbol names
+PASS:  run-tests.py 98: rename multiply defined symbols
+PASS:  run-tests.py 99: ignore multiply defined symbols
+PASS:  run-tests.py 100: multiple identical definitions of symbol names
+PASS:  run-tests.py 101: fill branches before modifying files on them
+PASS:  run-tests.py 102: error for conflicting tag/branch
+PASS:  run-tests.py 103: overlook conflicting tag/branch when --trunk-only
+PASS:  run-tests.py 104: force symbols to be tags/branches
+PASS:  run-tests.py 105: commit prevents forced tag
+PASS:  run-tests.py 106: error for blocked excludes
+PASS:  run-tests.py 107: excluding blocker removes blockage
+PASS:  run-tests.py 108: force symbols via regular expressions
+PASS:  run-tests.py 109: test 'heuristic' symbol default
+PASS:  run-tests.py 110: test 'branch' symbol default
+PASS:  run-tests.py 111: test 'tag' symbol default
+PASS:  run-tests.py 112: test --symbol-transform
+PASS:  run-tests.py 113: test --write-symbol-info
+PASS:  run-tests.py 114: test --symbol-hints for setting branch/tag
+PASS:  run-tests.py 115: test --symbol-hints for setting parent
+PASS:  run-tests.py 116: test --symbol-hints with an invalid parent
+PASS:  run-tests.py 117: test --symbol-hints wildcards
+PASS:  run-tests.py 118: test --symbol-hints for setting svn paths
+PASS:  run-tests.py 119: test problem from issue 99
+PASS:  run-tests.py 120: test problem from issue 100
+PASS:  run-tests.py 121: test problem from issue 106
+PASS:  run-tests.py 122: use of the --options option
+PASS:  run-tests.py 123: multiproject conversion
+PASS:  run-tests.py 124: multiproject conversion with cross-project commits
+PASS:  run-tests.py 125: tag defined but revision is deleted
+PASS:  run-tests.py 126: svn:ignore should vanish when .cvsignore does
+PASS:  run-tests.py 127: ignore repeated deltatext blocks with warning
+PASS:  run-tests.py 128: process some nasty dependency graphs
+W: CWD: /src
+W: EXCEPTION: Failure: Revision 3 changed paths list was:
+{'/tags/tag1 (from /trunk:2)': 'A', '/tags/tag1/test/b': 'D'}
+
+It should have been:
+{'/tags/tag1 (from /trunk:3)': 'A'}
+
+Traceback (most recent call last):
+  File "/src/svntest/main.py", line 1402, in run
+    rc = self.pred.run(sandbox)
+  File "/src/svntest/testcase.py", line 114, in run
+    return self._delegate.run(sandbox)
+  File "./run-tests.py", line 845, in run
+    return self.func()
+  File "./run-tests.py", line 3198, in tagging_after_delete
+    log.check_changes(expected)
+  File "./run-tests.py", line 300, in check_changes
+    % (self.revision, self.changed_paths, cp,)
+Failure: Revision 3 changed paths list was:
+{'/tags/tag1 (from /trunk:2)': 'A', '/tags/tag1/test/b': 'D'}
+
+It should have been:
+{'/tags/tag1 (from /trunk:3)': 'A'}
+
+
+XFAIL: run-tests.py 129: optimal tag after deleting files
+PASS:  run-tests.py 130: branches created in inconsistent orders
+PASS:  run-tests.py 131: error when filename conflicts with directory name
+PASS:  run-tests.py 132: error when attic filename conflicts with dirname
+PASS:  run-tests.py 133: verify that --use-rcs and --use-internal-co agree
+PASS:  run-tests.py 134: verify that --use-internal-co --exclude=... works
+PASS:  run-tests.py 135: verify that --use-internal-co --trunk-only works
+PASS:  run-tests.py 136: test that internal co handles keywords correctly
+PASS:  run-tests.py 137: check for leftover checked-out revisions
+PASS:  run-tests.py 138: test that internal co can do more than RCS
+PASS:  run-tests.py 139: test timestamp adjustments
+PASS:  run-tests.py 140: convert a repository that contains symlinks
+PASS:  run-tests.py 141: allow --trunk to be empty if --trunk-only
+PASS:  run-tests.py 142: handle a cycle in branch parent preferences
+PASS:  run-tests.py 143: branch from an empty directory
+PASS:  run-tests.py 144: add a file on a branch then on trunk
+PASS:  run-tests.py 145: branch from a 1.1 revision that will be deleted
+PASS:  run-tests.py 146: add a file on a branch using newer CVS
+PASS:  run-tests.py 147: test output in git-fast-import format
+PASS:  run-tests.py 148: test cvs2git --use-external-blob-generator option
+PASS:  run-tests.py 149: cvs2git with no blobfile
+PASS:  run-tests.py 150: cvs2git external with no blobfile
+PASS:  run-tests.py 151: test cvs2git using options file
+PASS:  run-tests.py 152: output in git-fast-import format with inline data
+PASS:  run-tests.py 153: a symbol with the incorrect format
+PASS:  run-tests.py 154: ignore a symbol using a SymbolMapper
+PASS:  run-tests.py 155: ignore a symbol using an IgnoreSymbolTransform
+PASS:  run-tests.py 156: handle various --eol-style options...variant LF
+PASS:  run-tests.py 157: handle various --eol-style options...variant CR
+PASS:  run-tests.py 158: handle various --eol-style options...variant CRLF
+PASS:  run-tests.py 159: handle various --eol-style option...variant native
+PASS:  run-tests.py 160: handle a file with no revisions (issue #80)
+PASS:  run-tests.py 161: a case that gave KeyError in SVNRepositoryMirror
+PASS:  run-tests.py 162: exclude a non-trunk default branch
+PASS:  run-tests.py 163: a case that gave KeyError in RepositoryMirror
+PASS:  run-tests.py 164: a case that gave KeyError in RepositoryMirror
+W: 
+Traceback (most recent call last):
+  File "/src/svntest/main.py", line 1402, in run
+    rc = self.pred.run(sandbox)
+  File "/src/svntest/testcase.py", line 114, in run
+    return self._delegate.run(sandbox)
+  File "./run-tests.py", line 845, in run
+    return self.func()
+  File "./run-tests.py", line 3710, in add_cvsignore_to_branch_test
+    raise Failure()
+Failure
+XFAIL: run-tests.py 165: check adding .cvsignore to an existing branch
+PASS:  run-tests.py 166: a revision's deltatext is missing
+PASS:  run-tests.py 167: transform name of unlabeled branch
+PASS:  run-tests.py 168: ignoring an unlabeled branch is not allowed
+PASS:  run-tests.py 169: exclude unlabeled branch
+PASS:  run-tests.py 170: transform unlabeled branch to same name as branch
+PASS:  run-tests.py 171: transform branch to same name as unlabeled branch
+PASS:  run-tests.py 172: a repo with many removable dead revisions
+PASS:  run-tests.py 173: test handling of CVS file descriptions
+PASS:  run-tests.py 174: test --include-empty-directories option
+PASS:  run-tests.py 175: test --include-empty-directories with --no-prune
+PASS:  run-tests.py 176: test 'exclude' symbol default
+PASS:  run-tests.py 177: another add-on-branch test case
+PASS:  run-tests.py 178: branch from vendor branch
+PASS:  run-tests.py 179: default branch too deep in the hierarchy
+PASS:  run-tests.py 180: graft onto preferred parent that was itself moved
+PASS:  run-tests.py 181: nonstandard EOLs in log messages
+PASS:  run-tests.py 182: default branch not present in RCS file
+PASS:  run-tests.py 183: newphrases in RCS files
+PASS:  run-tests.py 184: supposed vendor 1.1 commit is not a root commit

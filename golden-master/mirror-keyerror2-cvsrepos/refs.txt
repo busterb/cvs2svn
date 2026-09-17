@@ -1,0 +1,4 @@
+refs/heads/BRANCH1 6534bf06c1c84bc92f2091c6f76cdc65b327721c
+refs/heads/BRANCH2 2de3dabdd1fcf91fb0cd5ef1dc58d36726f0fa64
+refs/heads/master b65bc7b7ec82d173a03eca81b66e9812092a9c0d
+refs/tags/TAG1 bc7b1c034b847298fb48095c466ddcf4c97a628a

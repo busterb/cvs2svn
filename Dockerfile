@@ -15,7 +15,18 @@
 # to make an image for testing cvs2svn and to run those tests using
 # the image.
 
-FROM debian:jessie AS run
+FROM --platform=linux/amd64 debian:jessie AS run
+
+# jessie is EOL; deb.debian.org/security.debian.org no longer carry
+# it, so pin to a snapshot.debian.org mirror instead, and disable the
+# freshness/signature checks that a frozen historical snapshot will
+# always fail.
+RUN printf '%s\n' \
+      'deb [check-valid-until=no trusted=yes] http://snapshot.debian.org/archive/debian/20210326T030000Z jessie main' \
+      'deb [check-valid-until=no trusted=yes] http://snapshot.debian.org/archive/debian-security/20210326T030000Z jessie/updates main' \
+      'deb [check-valid-until=no trusted=yes] http://snapshot.debian.org/archive/debian/20210326T030000Z jessie-updates main' \
+      > /etc/apt/sources.list && \
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 
 RUN apt-get update && \
     apt-get install -y \
