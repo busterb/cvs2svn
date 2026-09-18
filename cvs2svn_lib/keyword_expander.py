@@ -96,10 +96,29 @@ class _KeywordExpander:
     # Would need some special handling.
     return 'not supported by cvs2svn'
 
+  def mdocdate(self):
+    # OpenBSD extension: the date format used by mdoc(7)'s .Dd macro,
+    # e.g. "$Mdocdate: January 24 2025 $".
+    return '%s %d %s' % (
+        time.strftime("%B", time.gmtime(self.timestamp)),
+        time.gmtime(self.timestamp).tm_mday,
+        time.strftime("%Y", time.gmtime(self.timestamp)),
+        )
+
   def name(self):
     # Cannot work, as just creating a new symbol does not check out
     # the revision again.
     return 'not supported by cvs2svn'
+
+  def openbsd(self):
+    # OpenBSD extension: like $Id$, but with a fixed keyword name
+    # (independent of the actual RCS filename) and CVS 1.11's
+    # slash-separated date format, matching what OpenBSD's own CVS
+    # server has always produced for this keyword.
+    self.use_old_date_format()
+    return '%s %s %s %s Exp' % (
+        self.rcsfile(), self.rev, self.date(), self.author_bytes.decode('utf8'),
+        )
 
   def rcsfile(self):
     return self.rcsfile_str
@@ -115,7 +134,10 @@ class _KeywordExpander:
     return 'Exp'
 
 
-_kws = b'Author|Date|Header|Id|Locker|Log|Name|RCSfile|Revision|Source|State'
+_kws = (
+    b'Author|Date|Header|Id|Locker|Log|Mdocdate|Name|OpenBSD|RCSfile'
+    b'|Revision|Source|State'
+    )
 _kw_re = re.compile(rb'\$(' + _kws + rb'):[^$\n]*\$')
 _kwo_re = re.compile(rb'\$(' + _kws + rb')(:[^$\n]*)?\$')
 
